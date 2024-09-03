@@ -1,3 +1,4 @@
+import EventEmitter from 'events';
 import UpbitEmitter, { SubscribeMessage } from './modules/upbit'
 
 const upbitSubscribeMessage: SubscribeMessage[] = [
@@ -13,6 +14,35 @@ const upbitSubscribeMessage: SubscribeMessage[] = [
   { format: 'DEFAULT' },
 ]
 
+interface Channel {
+  bind(emitter: EventEmitter): void;
+}
+
+class App {
+  #emitter: EventEmitter = new EventEmitter();
+
+  constructor() {}
+
+  subscribe(channel: Channel): this {
+    channel.bind(this.#emitter);
+    return this;
+  }
+
+  on(event: string | symbol, listener: (...args: any[]) => void): this {
+    this.#emitter.on(event, listener);
+    return this;
+  }
+}
+
 const upbit = new UpbitEmitter(upbitSubscribeMessage)
 
+// const app = new App()
+
+// app.subscribe(upbit).on('changePrice', (v) => {
+//   // console.log(v)
+// })
+
+// app.on('updateOrderbook', v => console.log(v))
+
 upbit.run()
+upbit.emit()
