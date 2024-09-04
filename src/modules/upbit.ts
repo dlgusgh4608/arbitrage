@@ -18,6 +18,7 @@ interface OrderbookUnit {
 
 // 전체 주문서를 나타내는 타입
 interface Orderbook {
+  from?: 'upbit'
   type: "orderbook" // 데이터 타입
   code: string      // 거래 쌍 코드
   timestamp: number // 데이터 수신 시각 (밀리초)
@@ -30,6 +31,7 @@ interface Orderbook {
 
 // Trade type
 interface Trade {
+  from?: 'upbit'
   type: "trade"                   // 데이터 타입
   code: string                    // 거래 쌍 코드
   timestamp: number               // 데이터 수신 시각 (밀리초)
@@ -61,9 +63,16 @@ class Upbit {
   #emitterOut: EventEmitter | undefined
   #emitInterval: number = 500
 
-  constructor(subscribeMessage: SubscribeMessage[], emitInterval = 500) {
+  constructor(coins: string[], emitInterval = 500) {
     this.#ws = new WebSocket(UPBIT_URL)
-    this.#subscribeMessage = subscribeMessage
+
+    this.#subscribeMessage = [
+      { ticket: 'upbitArbitrageTicket' },
+      { type: 'trade', codes: coins.map(coin => ['KRW', coin.toUpperCase()].join('-')) },
+      { type: 'orderbook', codes: coins.map(coin => ['KRW', coin.toUpperCase()].join('-')) },
+      { format: 'DEFAULT' }
+    ]
+
     this.#emitInterval = emitInterval
     this.#run = false
   }
@@ -81,9 +90,9 @@ class Upbit {
         const data = jsonData as Orderbook | Trade
 
         if (data.type === 'orderbook') { // is orderbook type
-          this.#orderbook = data
+          this.#orderbook = { from: 'upbit', ...data }
         } else if(data.type === 'trade') { // is trade type
-          this.#trade = data
+          this.#trade = { from: 'upbit', ...data }
         } else { // is Error
           throw new Error('Received message type is invalid')
         }
@@ -118,8 +127,8 @@ class Upbit {
   emit() {
     setInterval(() => {
       if(this.#emitterOut) {
-        this.#emitterOut.emit('changePrice', this.#trade)
-        this.#emitterOut.emit('updateOrderbook', this.#orderbook)
+        this.#emitterOut.emit('changePrice', Object.freeze(this.#trade))
+        this.#emitterOut.emit('updateOrderbook', Object.freeze(this.#orderbook))
       }
     }, this.#emitInterval)
   }
@@ -140,10 +149,9 @@ class Upbit {
   
       this.#open()
     } catch (error) {
-      console.error(error)
+      throw error
     }
   }
 }
 
-export type { SubscribeMessage }
 export default Upbit
