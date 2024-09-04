@@ -46,6 +46,10 @@ interface Trade {
   stream_type: "SNAPSHOT" | "REALTIME" // 스트림 타입
 }
 
+interface Pong {
+  status: 'UP'
+}
+
 class Upbit {
   #ws: WebSocket
   #subscribeMessage: SubscribeMessage[]
@@ -55,49 +59,89 @@ class Upbit {
   #trade: Trade | undefined
 
   #emitterOut: EventEmitter | undefined
+  #emitInterval: number = 500
 
-  constructor(subscribeMessage: SubscribeMessage[]) {
+  constructor(subscribeMessage: SubscribeMessage[], emitInterval = 500) {
     this.#ws = new WebSocket(UPBIT_URL)
     this.#subscribeMessage = subscribeMessage
+    this.#emitInterval = emitInterval
+    this.#run = false
   }
 
-  #receiveMessage = (message: WebSocket.MessageEvent) => {
+  #handleMessage = (message: Buffer) => {
     try {
-      const jsonData: Orderbook | Trade = JSON.parse(message.toString())
-      if (!jsonData?.type) return new Error('Received message does not have type')
-      if (!(jsonData.type === 'orderbook' || jsonData.type === 'trade')) return new Error('Received message type is invalid')
+      const jsonData: Orderbook | Trade | Pong = JSON.parse(message.toString())
+      if((jsonData as Pong).status) {
+        const pongData = jsonData as Pong
 
-      if (jsonData.type === 'orderbook') { // is orderbook type
-        this.#orderbook = jsonData
-      } else { // is trade type
-        this.#trade = jsonData
+        if(pongData.status !== 'UP') this.close()
+      } else {
+        if (!(jsonData as Orderbook | Trade).type) throw new Error('Received message does not have type')
+  
+        const data = jsonData as Orderbook | Trade
+
+        if (data.type === 'orderbook') { // is orderbook type
+          this.#orderbook = data
+        } else if(data.type === 'trade') { // is trade type
+          this.#trade = data
+        } else { // is Error
+          throw new Error('Received message type is invalid')
+        }
       }
+      
     } catch (error) {
-      throw error
+      this.#emitterOut?.emit('error', error)
     }
   }
+
+  #receiveMessage() { this.#ws.on('message', this.#handleMessage) }
+
+  #reallocation() {
+    this.#ws = new WebSocket(UPBIT_URL)
+    this.#run = false
+    this.#trade = undefined
+    this.#orderbook = undefined
+  }
+
+  #open() {
+    this.#ws.on('open', () => {
+      console.log('Upbit WebSocket Connected')
+      this.#ws.send(JSON.stringify(this.#subscribeMessage))
+      this.#ws.send('PING')
+    })
+  }
+
+  close() { this.#ws.close() }
 
   bind(emitter = new EventEmitter()) { this.#emitterOut = emitter }
 
   emit() {
-    if(!this.#emitterOut) return
-
     setInterval(() => {
-      this.#emitterOut?.emit('changePrice', this.#trade)
-
-      this.#emitterOut?.emit('updateOrderbook', this.#orderbook)
-    }, 500)
+      if(this.#emitterOut) {
+        this.#emitterOut.emit('changePrice', this.#trade)
+        this.#emitterOut.emit('updateOrderbook', this.#orderbook)
+      }
+    }, this.#emitInterval)
   }
 
-  run() {
-    if (this.#run) return new Error('This socket is already running!')
-    this.#run = true
+  run(restart: boolean = true) {
+    try {
+      if (this.#run) throw new Error('This socket is already running!')
+      this.#run = true
+  
+      this.#ws.on('close', () => {
+        console.log('Upbit WebSocket Disconnected')
+        this.#reallocation()
 
-    this.#ws.on('message', this.#receiveMessage)
-    
-    this.#ws.on('open', () => {
-      this.#ws.send(JSON.stringify(this.#subscribeMessage))
-    })
+        if(restart) this.run(restart)
+      })
+
+      this.#receiveMessage()
+  
+      this.#open()
+    } catch (error) {
+      console.error(error)
+    }
   }
 }
 

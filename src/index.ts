@@ -34,15 +34,15 @@ class App {
   }
 }
 
-const upbit = new UpbitEmitter(upbitSubscribeMessage)
+const upbit = new UpbitEmitter(upbitSubscribeMessage, 500)
 
-// const app = new App()
+const app = new App()
 
-// app.subscribe(upbit).on('changePrice', (v) => {
-//   // console.log(v)
-// })
+app.subscribe(upbit)
 
-// app.on('updateOrderbook', v => console.log(v))
+app.on('changePrice', (v) => console.log(JSON.stringify(v)))
+app.on('updateOrderbook', v => console.log(JSON.stringify(v)))
+app.on('error', v => console.log(v))
 
 upbit.run()
 upbit.emit()
