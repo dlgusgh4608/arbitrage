@@ -1,18 +1,8 @@
 import EventEmitter from 'events';
-import UpbitEmitter, { SubscribeMessage } from './modules/upbit'
-
-const upbitSubscribeMessage: SubscribeMessage[] = [
-  { ticket: 'upbitArbitrageTicket' },
-  {
-    type: 'trade',
-    codes: ['KRW-BTC']
-  },
-  {
-    type: 'orderbook',
-    codes: ['KRW-BTC']
-  },
-  { format: 'DEFAULT' },
-]
+import {
+  Upbit,
+  Binance
+} from './modules'
 
 interface Channel {
   bind(emitter: EventEmitter): void;
@@ -34,15 +24,35 @@ class App {
   }
 }
 
-const upbit = new UpbitEmitter(upbitSubscribeMessage, 500)
+async function main() {
+  try {
+    const coins = ['btc', 'eth']
+    const intervalTime = 500
 
-const app = new App()
+    const app = new App()
+    const upbit = new Upbit(coins, intervalTime)
+    const binance = new Binance(coins, intervalTime)
 
-app.subscribe(upbit)
+    app
+      .on('changePrice', obj => {
+        // trade data
+      })
+      .on('updateOrderbook', obj => {
+        // orderbook data
+      })
+      .on('error', obj => {
+        // error data
+      })
 
-app.on('changePrice', (v) => console.log(JSON.stringify(v)))
-app.on('updateOrderbook', v => console.log(JSON.stringify(v)))
-app.on('error', v => console.log(v))
+    app.subscribe(upbit).subscribe(binance)
 
-upbit.run()
-upbit.emit()
+    upbit.run()
+    binance.run()
+    
+    upbit.emit()
+    binance.emit()
+
+  } catch (error) {
+    console.error(error)
+  }
+}
