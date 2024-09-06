@@ -2,9 +2,11 @@ import WebSocket from "ws";
 import EventEmitter from "events";
 import dayjs from "dayjs";
 
+import { BINANCE_ORDERBOOK, BINANCE_TRADE } from '@libs/variables'
+
 const BINANCE_URL: string = 'wss://fstream.binance.com/stream?streams=' // example "wss://fstream.binance.com/stream?streams=bnbusdt@aggTrade/btcusdt@markPrice"
 
-interface AggTradeOriginal {
+interface TradeOriginal {
   e: "aggTrade"    // Event type, which is a literal type
   E: number        // Event time, which is a number
   s: string        // Symbol, which is a string
@@ -16,14 +18,13 @@ interface AggTradeOriginal {
   T: number        // Trade time, which is a number
   m: boolean        // Is the buyer the market maker?, which is a boolean
 }
-interface AggTrade {
-  from: 'binance';
+export interface BinanceTrade {
   type: "aggTrade";
   eventTime: number;
   symbol: string;
   aggregateTradeId: number;
-  price: string;
-  quantity: string;
+  price: number;
+  quantity: number;
   firstTradeId: number;
   lastTradeId: number;
   tradeTime: number;
@@ -41,8 +42,7 @@ interface OrderbookOriginal {
   b: [string, string][]; // Bids to be updated, an array of arrays with string values
   a: [string, string][]; // Asks to be updated, an array of arrays with string values
 }
-interface Orderbook {
-  from: 'binance';
+export interface BinanceOrderbook {
   type: "depthUpdate";
   eventTime: number;
   transactionTime: number;
@@ -58,18 +58,15 @@ interface Order {
   quantity: number
 }
 
-class Binance {
+export class Binance {
   #ws: WebSocket
   #run: boolean = false
   #url: string = ''
 
-  #trade: AggTrade | undefined
-  #orderbook: Orderbook | undefined
-
   #emitterOut: EventEmitter | undefined
-  #emitInterval: number = 500
+  #emit: boolean = false
 
-  constructor(coins: string[], emitInterval: number = 500) {
+  constructor(coins: string[]) {
     const streamParams: string = [
       ...coins.map(coin => [coin.toLowerCase().concat('usdt'), 'aggTrade'].join('@')),
       ...coins.map(coin => [coin.toLowerCase().concat('usdt'), 'depth10@100ms'].join('@')),
@@ -77,7 +74,6 @@ class Binance {
 
     const url: string = BINANCE_URL.concat(streamParams)
     
-    this.#emitInterval = emitInterval
     this.#url = url
 
     this.#ws = new WebSocket(url)
@@ -85,19 +81,18 @@ class Binance {
 
   #open() {
     this.#ws.on('open', () => {
-      console.log('Binance WebSocket Connected')
+      console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]\tBinance WebSocket Connected`)
     })
   }
 
-  #transformAggTrade(original: AggTradeOriginal): AggTrade {
+  #transformAggTrade(original: TradeOriginal): BinanceTrade {
     return {
-      from: 'binance',
       type: original.e,
       eventTime: original.E,
       symbol: original.s,
       aggregateTradeId: original.a,
-      price: original.p,
-      quantity: original.q,
+      price: Number(original.p),
+      quantity: Number(original.q),
       firstTradeId: original.f,
       lastTradeId: original.l,
       tradeTime: original.T,
@@ -105,9 +100,8 @@ class Binance {
     };
   }
 
-  #transformOrderbook(original: OrderbookOriginal): Orderbook {
+  #transformOrderbook(original: OrderbookOriginal): BinanceOrderbook {
     return {
-      from: 'binance',
       type: original.e,
       eventTime: original.E,
       transactionTime: original.T,
@@ -122,12 +116,14 @@ class Binance {
 
   #handleMessage = (message: Buffer) => {
     try {
-      const jsonData: AggTradeOriginal | OrderbookOriginal = JSON.parse(message.toString()).data
+      if(!this.#emitterOut || !this.#emit) return
+      
+      const jsonData: TradeOriginal | OrderbookOriginal = JSON.parse(message.toString()).data
 
       if(jsonData.e === 'aggTrade') {
-        this.#trade = this.#transformAggTrade(jsonData)
+        this.#emitterOut.emit(BINANCE_TRADE, this.#transformAggTrade(jsonData))
       }else if(jsonData.e === 'depthUpdate') {
-        this.#orderbook = this.#transformOrderbook(jsonData)
+        this.#emitterOut.emit(BINANCE_ORDERBOOK, this.#transformOrderbook(jsonData))
       }else {
         throw new Error('Received message type is invalid')
       }
@@ -141,13 +137,10 @@ class Binance {
   #reallocation() {
     this.#ws = new WebSocket(this.#url)
     this.#run = false
-    this.#trade = undefined
-    this.#orderbook = undefined
   }
 
   #ping() {
     this.#ws.on('ping', (e: Buffer) => {
-      console.log(`[${dayjs(Number(e.toString())).format('YYYY-MM-DD HH-mm:ss')}]\tPing!`)
       this.#ws.pong()
     })
   }
@@ -156,14 +149,7 @@ class Binance {
 
   bind(emitter = new EventEmitter()) { this.#emitterOut = emitter }
 
-  emit() {
-    setInterval(() => {
-      if(this.#emitterOut) {
-        this.#emitterOut.emit('changePrice', Object.freeze(this.#trade))
-        this.#emitterOut.emit('updateOrderbook', Object.freeze(this.#orderbook))
-      }
-    }, this.#emitInterval)
-  }
+  emit() { this.#emit = true }
 
   run(restart: boolean = true) {
     try {
@@ -187,5 +173,3 @@ class Binance {
     }
   }
 }
-
-export default Binance

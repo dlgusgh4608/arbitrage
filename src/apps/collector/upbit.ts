@@ -1,5 +1,8 @@
 import EventEmitter from 'events';
 import WebSocket from 'ws'
+import dayjs from 'dayjs'
+
+import { UPBIT_ORDERBOOK, UPBIT_TRADE } from '@libs/variables'
 
 const UPBIT_URL = 'wss://api.upbit.com/websocket/v1'
 
@@ -17,8 +20,7 @@ interface OrderbookUnit {
 }
 
 // 전체 주문서를 나타내는 타입
-interface Orderbook {
-  from?: 'upbit'
+export interface UpbitOrderbook {
   type: "orderbook" // 데이터 타입
   code: string      // 거래 쌍 코드
   timestamp: number // 데이터 수신 시각 (밀리초)
@@ -30,8 +32,7 @@ interface Orderbook {
 }
 
 // Trade type
-interface Trade {
-  from?: 'upbit'
+export interface UpbitTrade {
   type: "trade"                   // 데이터 타입
   code: string                    // 거래 쌍 코드
   timestamp: number               // 데이터 수신 시각 (밀리초)
@@ -52,13 +53,13 @@ interface Pong {
   status: 'UP'
 }
 
-class Upbit {
+export class Upbit {
   #ws: WebSocket
   #subscribeMessage: SubscribeMessage[]
   #run: boolean = false
 
-  #orderbook: Orderbook | undefined
-  #trade: Trade | undefined
+  #orderbook: UpbitOrderbook | undefined
+  #trade: UpbitTrade | undefined
 
   #emitterOut: EventEmitter | undefined
   #emitInterval: number = 500
@@ -79,20 +80,24 @@ class Upbit {
 
   #handleMessage = (message: Buffer) => {
     try {
-      const jsonData: Orderbook | Trade | Pong = JSON.parse(message.toString())
+      const jsonData: UpbitOrderbook | UpbitTrade | Pong = JSON.parse(message.toString())
       if((jsonData as Pong).status) {
         const pongData = jsonData as Pong
 
-        if(pongData.status !== 'UP') this.close()
+        if(pongData.status !== 'UP') {
+          this.close()
+        }else {
+          this.#ws.send('PING')
+        }
       } else {
-        if (!(jsonData as Orderbook | Trade).type) throw new Error('Received message does not have type')
+        if (!(jsonData as UpbitOrderbook | UpbitTrade).type) throw new Error('Received message does not have type')
   
-        const data = jsonData as Orderbook | Trade
+        const data = jsonData as UpbitOrderbook | UpbitTrade
 
         if (data.type === 'orderbook') { // is orderbook type
-          this.#orderbook = { from: 'upbit', ...data }
+          this.#orderbook = data
         } else if(data.type === 'trade') { // is trade type
-          this.#trade = { from: 'upbit', ...data }
+          this.#trade = data
         } else { // is Error
           throw new Error('Received message type is invalid')
         }
@@ -114,7 +119,7 @@ class Upbit {
 
   #open() {
     this.#ws.on('open', () => {
-      console.log('Upbit WebSocket Connected')
+      console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]\tUpbit WebSocket Connected`)
       this.#ws.send(JSON.stringify(this.#subscribeMessage))
       this.#ws.send('PING')
     })
@@ -127,8 +132,8 @@ class Upbit {
   emit() {
     setInterval(() => {
       if(this.#emitterOut) {
-        this.#emitterOut.emit('changePrice', Object.freeze(this.#trade))
-        this.#emitterOut.emit('updateOrderbook', Object.freeze(this.#orderbook))
+        if(this.#trade) this.#emitterOut.emit(UPBIT_TRADE, Object.freeze(this.#trade))
+        if(this.#orderbook) this.#emitterOut.emit(UPBIT_ORDERBOOK, Object.freeze(this.#orderbook))
       }
     }, this.#emitInterval)
   }
@@ -139,7 +144,7 @@ class Upbit {
       this.#run = true
   
       this.#ws.on('close', () => {
-        console.log('Upbit WebSocket Disconnected')
+        console.log(`Upbit WebSocket Disconnected`)
         this.#reallocation()
 
         if(restart) this.run(restart)
@@ -153,5 +158,3 @@ class Upbit {
     }
   }
 }
-
-export default Upbit
