@@ -1,14 +1,13 @@
 import EventEmitter from 'events'
 import axios from 'axios'
-import { isNotNumber } from '../libs/regex'
-import { EXCHANGE_RATE } from '../libs/variables'
+import * as cheerio from 'cheerio'
 import dayjs from 'dayjs'
 
-const url = 'https://www.google.com/finance/quote/USD-KRW'
+import { isNotNumber } from '../libs/regex'
+import { EXCHANGE_RATE } from '../libs/variables'
 
-const currentDiv = '<div class="YMlKec fxKbKc">'
-
-const exchangeRateLengthForGoogle = 10
+const GOOGLE_FINANCE_URL = 'https://www.google.com/finance/quote/USD-KRW'
+const CURRENT_SELECTOR = 'div.YMlKec.fxKbKc'
 
 class ExchangeRate {
   #intervalSec: number = 10
@@ -20,15 +19,13 @@ class ExchangeRate {
 
   async #getUsdToKrw(): Promise<number> {
     try {
-      const { data }: { data: string } = await axios.get(url)
+      const { data } = await axios.get(GOOGLE_FINANCE_URL)
 
-      const currentIndex = data.indexOf(currentDiv) + currentDiv.length
+      const $ = cheerio.load(data)
 
-      const exchangeRateOfString = data
-        .substring(currentIndex, currentIndex + exchangeRateLengthForGoogle)
-        .replace(isNotNumber, '')
-
-      const exchangeRate = Number(exchangeRateOfString)
+      const exchangeRateToString = $(CURRENT_SELECTOR).text().replace(isNotNumber, '')
+      
+      const exchangeRate = Number(exchangeRateToString)
 
       return exchangeRate
     } catch (error) {

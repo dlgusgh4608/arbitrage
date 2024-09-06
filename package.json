@@ -13,13 +13,18 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@types/cheerio": "^0.22.35",
     "@types/node": "^22.5.2",
     "nodemon": "^3.1.4",
     "ts-node": "^10.9.2"
   },
   "dependencies": {
+    "@types/lodash": "^4.17.7",
     "@types/ws": "^8.5.12",
+    "axios": "^1.7.7",
+    "cheerio": "^1.0.0",
     "dayjs": "^1.11.13",
+    "lodash": "^4.17.21",
     "typescript": "^5.5.4",
     "ws": "^8.18.0"
   }
