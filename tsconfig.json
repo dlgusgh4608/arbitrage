@@ -6,8 +6,8 @@
     "rootDir": "./src", //루트 폴더
     "baseUrl": ".",
     "paths": {
-      "@libs/*": ["src/libs/*"],
-      "@libs": ["src/libs/index.ts"],
+      "@utils/*": ["src/utils/*"],
+      "@utils": ["src/utils/index.ts"],
       "@modules/*": ["src/modules/*"],
     },
     "strict": true, //strict 옵션 활성화

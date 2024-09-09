@@ -3,8 +3,8 @@ import axios from 'axios'
 import * as cheerio from 'cheerio'
 import dayjs from 'dayjs'
 
-import { isNotNumber } from '@libs/regex'
-import { EXCHANGE_RATE } from '@libs/variables'
+import { isNotNumber } from '@utils/regex'
+import { EXCHANGE_RATE } from '@utils/variables'
 
 const GOOGLE_FINANCE_URL = 'https://www.google.com/finance/quote/USD-KRW'
 const CURRENT_SELECTOR = 'div.YMlKec.fxKbKc'

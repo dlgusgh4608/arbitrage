@@ -3,14 +3,14 @@ import {
   Binance,
   BinanceOrderbook,
   BinanceTrade,
-} from './binance'
+} from '@modules/binance/public/websocket'
 
-import { ExchangeRate } from './exchange-rate'
+import { ExchangeRate } from '@modules/exchange-rate'
 import {
   Upbit,
   UpbitOrderbook,
   UpbitTrade,
-} from './upbit'
+} from '@modules/upbit/public/websocket'
 
 import {
   BINANCE_ORDERBOOK,
@@ -18,11 +18,11 @@ import {
   UPBIT_ORDERBOOK,
   UPBIT_TRADE,
   EXCHANGE_RATE
-} from '@libs/variables'
-
-import { krwToUsd, getPremium, usdToKrw } from '@libs'
+} from '@utils/variables'
 
 import { EventBroker } from '@modules/event-broker'
+
+import { krwToUsd, getPremium, usdToKrw } from '@utils'
 
 interface BinanceTrades { [symbol: string]: BinanceTrade }
 interface BinanceOrderbooks { [symbol: string]: BinanceOrderbook }
