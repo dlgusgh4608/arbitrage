@@ -9,9 +9,12 @@
       "@utils/*": ["src/utils/*"],
       "@utils": ["src/utils/index.ts"],
       "@modules/*": ["src/modules/*"],
+      "@database": ["src/database/index.ts"]
     },
     "strict": true, //strict 옵션 활성화
     "moduleResolution": "node", //모듈 해석 방법 설정: 'node' (Node.js)
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "emitDecoratorMetadata": true, // 컴파일시 데코레이터에 대한 메타데이터를 생성 (package.json -> script -> reflect-metadata)
+    "experimentalDecorators": true, // typeORM 에서 데코레이터(ex. @Column())를 사용하기 위해
   }
 }
