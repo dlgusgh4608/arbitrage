@@ -6,14 +6,14 @@ if(process.env.NODE_ENV === 'production') {
   dotenv.config({ path: path.join(__dirname, '../.env.development') })
 }
 
-import { connect } from './database'
+import { initializeDatabase } from './databases/pg'
 import { Collector } from './apps/collector'
 import { Archive } from './apps/archive'
 import EventEmitter from 'events'
 
 async function main() {
   try {
-    await connect()
+    await initializeDatabase()
 
     const coreEmitter = new EventEmitter()
     const collector = new Collector(coreEmitter)

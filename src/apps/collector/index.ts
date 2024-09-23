@@ -18,7 +18,7 @@ import {
   UPBIT_ORDERBOOK,
   UPBIT_TRADE,
   EXCHANGE_RATE
-} from '@utils/variables'
+} from '@utils/constants'
 
 import { EventBroker } from '@modules/event-broker'
 

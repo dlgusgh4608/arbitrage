@@ -2,7 +2,7 @@ import EventEmitter from 'events';
 import WebSocket from 'ws'
 import dayjs from 'dayjs'
 
-import { UPBIT_ORDERBOOK, UPBIT_TRADE } from '@utils/variables'
+import { UPBIT_ORDERBOOK, UPBIT_TRADE } from '@utils/constants'
 
 const UPBIT_URL = 'wss://api.upbit.com/websocket/v1'
 

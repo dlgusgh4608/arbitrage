@@ -2,7 +2,7 @@ import WebSocket from "ws";
 import EventEmitter from "events";
 import dayjs from "dayjs";
 
-import { BINANCE_ORDERBOOK, BINANCE_TRADE } from '@utils/variables'
+import { BINANCE_ORDERBOOK, BINANCE_TRADE } from '@utils/constants'
 
 const BINANCE_URL: string = 'wss://fstream.binance.com/stream?streams=' // example "wss://fstream.binance.com/stream?streams=bnbusdt@aggTrade/btcusdt@markPrice"
 
