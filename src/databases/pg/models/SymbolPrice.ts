@@ -3,6 +3,6 @@ export interface SymbolPriceType {
     createdAt: Date
     premium: number
     domestic: number
-    foreign: number
+    overseas: number
     exchangeRate: number
 }

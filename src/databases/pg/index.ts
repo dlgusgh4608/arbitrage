@@ -26,15 +26,15 @@ async function checkExistsDatabase() {
 
     const dbExistsResult = await tempClient.query(
       `SELECT 1 FROM pg_database WHERE datname = $1`,
-      [process.env.DB_NAME]
+      [process.env.PG_DB_NAME]
     )
 
     if (dbExistsResult.rows.length === 0) {
-      console.log(`database is not exists DB_NAME: ${process.env.DB_NAME}`)
-      await tempClient.query(`CREATE DATABASE ${process.env.DB_NAME}`)
-      console.log(`database is created DB_NAME: ${process.env.DB_NAME}`)
+      console.log(`[PostgreSQL]\tdatabase is not exists (${process.env.PG_DB_NAME})`)
+      await tempClient.query(`CREATE DATABASE ${process.env.PG_DB_NAME}`)
+      console.log(`[PostgreSQL]\tdatabase is created (${process.env.PG_DB_NAME})`)
     }else {
-      console.log(`find database DB_NAME: ${process.env.DB_NAME}`)
+      console.log(`[PostgreSQL]\tfind database (${process.env.PG_DB_NAME})`)
     }
 
     tempClient.release()
@@ -48,14 +48,14 @@ export const initializeDatabase = async () => {
   try {
     await checkExistsDatabase()
     const client = await pool.connect()
-    console.log(`database is connected DB_NAME: ${process.env.DB_NAME}`)
 
     await client.query(initSQL)
-    console.log('database is initialized')
+    console.log(`[PostgreSQL]\tdatabase is initialized (${process.env.PG_DB_NAME})`)
 
     client.release()
+    console.log(`[PostgreSQL]\tdatabase is connected (${process.env.PG_DB_NAME})`)
   } catch (error) {
-    console.error('database is not connected:', error)
+    console.error(`[PostgreSQL]\tdatabase is not connected (${process.env.PG_DB_NAME})`, error)
     process.exit(1)
   }
 }
