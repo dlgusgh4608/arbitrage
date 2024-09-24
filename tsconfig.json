@@ -9,7 +9,7 @@
       "@utils/*": ["src/utils/*"],
       "@utils": ["src/utils/index.ts"],
       "@modules/*": ["src/modules/*"],
-      "@database": ["src/database/index.ts"]
+      "@databases/*": ["src/databases/*"]
     },
     "strict": true, //strict 옵션 활성화
     "moduleResolution": "node", //모듈 해석 방법 설정: 'node' (Node.js)
