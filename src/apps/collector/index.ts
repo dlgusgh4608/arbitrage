@@ -13,30 +13,25 @@ import {
 } from '@modules/upbit/public/websocket'
 
 import {
-  BINANCE_ORDERBOOK,
-  BINANCE_TRADE,
-  UPBIT_ORDERBOOK,
-  UPBIT_TRADE,
   EXCHANGE_RATE
 } from '@utils/constants'
 
 import { EventBroker } from '@modules/event-broker'
 
-import { krwToUsd, getPremium, usdToKrw } from '@utils'
+import { krwToUsd, getPremium, getTimeDifference } from '@utils'
 
-interface BinanceTrades { [symbol: string]: BinanceTrade }
-interface BinanceOrderbooks { [symbol: string]: BinanceOrderbook }
+import dayjs from 'dayjs'
+
+import { SymbolSchema } from '@databases/pg/models'
 
 export interface Premium {
   symbol: string // 심볼: BTC, ETH
   premium: number // 김프
-  upbitUSD: number // 업비트(USD)
-  upbitKRW: number // 업비트(KRW)
-  binanceUSD: number // 바이낸스(USD)
-  binanceKRW: number // 바이낸스(KRW)
+  domestic: number // 업비트(KRW)
+  overseas: number // 바이낸스(USD)
   exchangeRate: number // 환율
-  upbitTimestamp: number // 업비트(TIME_STAMP)
-  binanceTimestamp: number // 바이낸스(TIME_STAMP)
+  domesticTradeAt: Date // 국내 체결 시간
+  overseasTradeAt: Date // 해외 체결 시간
 }
 
 export interface Orderbook {
@@ -44,103 +39,133 @@ export interface Orderbook {
   upbit: UpbitOrderbook
 }
 
+const TIME_DIFFERENCE_LIMIT_SEC = 60
+const EXCHANGE_RATE_INTERVAL_TIME_TO_SEC = 10
+const PREMIUM_INTERVAL_TIME_TO_SEC = 100
+const UPBIT_UNIQUE_SYMBOL = 'ConnectUpbitSocketForCollector'
+
 export class Collector {
   #emitter: EventEmitter = new EventEmitter()
-  
-  #binanceTrades: BinanceTrades = {}
-  #binanceOrderbooks: BinanceOrderbooks = {}
 
+  #symbols: SymbolSchema[] = []
+
+  #upbit: Upbit | undefined
+  #binance: Binance | undefined
   #exchangeRate: number = 0
   
-  constructor(emitter: EventEmitter) {
+  constructor(emitter: EventEmitter, symbols: SymbolSchema[]) {
     this.#emitter = emitter
+    this.#symbols = symbols
   }
 
-
-  #handleTrade = (upbitData: UpbitTrade): void => {
-    const symbol = upbitData.code.replace('KRW-', '')
-    const binanceData = this.#binanceTrades[symbol]
-
-    if(!binanceData || this.#exchangeRate < 1000) return
-
-    const fixedExchangeRate = this.#exchangeRate
-    const { price: binanceUSD, eventTime: binanceTimestamp } = binanceData
-    const { trade_price: upbitKRW, timestamp: upbitTimestamp } = upbitData
-
-    const upbitUSD = krwToUsd(upbitData.trade_price, fixedExchangeRate)
-    const binanceKRW = usdToKrw(binanceData.price, fixedExchangeRate)
-    const premium = getPremium(upbitUSD, binanceData.price)
-
-    const payload: Premium = {
-      symbol,
-      premium,
-      upbitUSD,
-      upbitKRW,
-      binanceUSD,
-      binanceKRW,
-      exchangeRate: fixedExchangeRate,
-      upbitTimestamp,
-      binanceTimestamp,
-    }
-    
-    this.#emitter.emit('premium', payload)
-  }
-
-  #handleOrderbook = (upbitOrderbook: UpbitOrderbook): void => { //Orderbook은 Front-end에 뿌려주기만 하는 용도 DB저장 안함
-    const symbol = upbitOrderbook.code.replace('KRW-', '')
-    const binanceOrderbook = this.#binanceOrderbooks[symbol]
-    if(!binanceOrderbook) return
-
-    const orderbook: Orderbook = {
-      upbit: upbitOrderbook,
-      binance: binanceOrderbook
-    }
-
-    this.#emitter.emit('orderbook', orderbook)
+  #onExchangeRate = (response: number) => {
+    this.#exchangeRate = response
   }
 
   #handleError = (error: any) => {
     this.#emitter.emit('error', error)
   }
 
-  #setBinanceTrades = (response: BinanceTrade) => {
-    this.#binanceTrades = { ...this.#binanceTrades, [response.symbol.replace('USDT', '')]: response }
+  #publishPremium = () => {
+    if(!this.#upbit) return
+    if(!this.#binance) return
+    if(this.#exchangeRate < 1000) return
+    
+    for(const symbol of this.#symbols) {
+      const { name, domestic, overseas } = symbol
+      const key = [name, domestic, overseas, 'trade'].join('-')
+      const upbitData = this.#upbit.get('trade', name) as UpbitTrade
+      const binanceData = this.#binance.get('trade', name) as BinanceTrade
+
+      if(!upbitData || !binanceData) continue
+
+      const upbitLastTradeTime = dayjs(upbitData.trade_timestamp).toDate()
+      const binanceLastTradeTime = dayjs(binanceData.tradeTime).toDate()
+
+      if(Math.abs(getTimeDifference(upbitLastTradeTime, binanceLastTradeTime)) > TIME_DIFFERENCE_LIMIT_SEC) {
+        console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]:${key}\tTime difference between upbit and binance is more than ${TIME_DIFFERENCE_LIMIT_SEC} seconds`)
+        this.#emitter.emit('error', `time difference between upbit and binance is more than ${TIME_DIFFERENCE_LIMIT_SEC} seconds`)
+        
+        continue
+      }
+
+      const fixedExchangeRate = this.#exchangeRate
+      const { price: binancePrice } = binanceData
+      const { trade_price: upbitPrice } = upbitData
+
+      const upbitUSD = krwToUsd(upbitData.trade_price, fixedExchangeRate)
+      const premium = getPremium(upbitUSD, binanceData.price)
+      
+      const payload: Premium = {
+        symbol: name,
+        premium,
+        domestic: upbitPrice,
+        overseas: binancePrice,
+        exchangeRate: fixedExchangeRate,
+        domesticTradeAt: upbitLastTradeTime,
+        overseasTradeAt: binanceLastTradeTime
+      }
+      
+      this.#emitter.emit(
+        key,
+        payload
+      )
+    }
   }
 
-  #setBinanceOrderbooks = (response: BinanceOrderbook) => {
-    this.#binanceOrderbooks = { ...this.#binanceOrderbooks, [response.symbol.replace('USDT', '')]: response }
+  #publishOrderbook = () => {
+    if(!this.#upbit) return
+    if(!this.#binance) return
+
+    for(const symbol of this.#symbols) {
+      const { name, domestic, overseas } = symbol
+      const upbitData = this.#upbit.get('orderbook', name) as UpbitOrderbook
+      const binanceData = this.#binance.get('orderbook', name) as BinanceOrderbook
+      
+      this.#emitter.emit(
+        [symbol, domestic, overseas, 'orderbook'].join('-'),
+        {
+          upbit: upbitData,
+          binance: binanceData,
+        }
+      )
+    } 
   }
 
-  #setExchangeRate = (response: number) => {
-    this.#exchangeRate = response
+  #publish = () => {
+    this.#publishPremium()
+    this.#publishOrderbook()
   }
   
   run(): void {
     try {
-      const coins: string[] = ['btc']
-      const exchangeRateIntervalTimeToSec: number = 10
-
+      const symbolNames = this.#symbols.map(symbol => symbol.name)
+      // PostgreSQL에 Symbols table이 비어있으면 에러 발생
+      if(symbolNames.length === 0) throw new Error('symbolNames is empty')
+        
+      // 각 class를 생성
+      const upbit = new Upbit(symbolNames, UPBIT_UNIQUE_SYMBOL)
+      const binance = new Binance(symbolNames)
+      const exchangeRateApp = new ExchangeRate(EXCHANGE_RATE_INTERVAL_TIME_TO_SEC)
+      
+      // event broker 생성 후 연결
       const eventBroker = new EventBroker()
-      const upbit = new Upbit(coins)
-      const binance = new Binance(coins)
-      const exchangeRateApp = new ExchangeRate(exchangeRateIntervalTimeToSec)
-
       eventBroker
-        .on(UPBIT_TRADE, this.#handleTrade)
-        .on(UPBIT_ORDERBOOK, this.#handleOrderbook)
-        .on(BINANCE_TRADE, this.#setBinanceTrades)
-        .on(BINANCE_ORDERBOOK, this.#setBinanceOrderbooks)
-        .on(EXCHANGE_RATE, this.#setExchangeRate)
+        .subscribe(exchangeRateApp)
+        .on(EXCHANGE_RATE, this.#onExchangeRate)
         .on('error', this.#handleError)
 
-      eventBroker.subscribe(upbit).subscribe(binance).subscribe(exchangeRateApp)
-
+      // 각 class 실행
       upbit.run()
       binance.run()
       exchangeRateApp.run()
-      
-      upbit.emit()
-      binance.emit()
+
+      // 각 class 저장
+      this.#upbit = upbit
+      this.#binance = binance
+
+      // publish premium and orderbook
+      setInterval(this.#publish, PREMIUM_INTERVAL_TIME_TO_SEC)
     } catch (error) {
       this.#emitter.emit('error', error)
     }

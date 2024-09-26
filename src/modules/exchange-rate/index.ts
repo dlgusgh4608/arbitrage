@@ -56,7 +56,7 @@ export class ExchangeRate {
         }
       }, this.#intervalSec * 1000)
     } catch (error) {
-      throw error
+      this.#emitterOut?.emit('error', error)
     }
   }
 }

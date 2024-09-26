@@ -1,6 +1,6 @@
-import Redis from 'ioredis';
+import Redis, { ChainableCommander } from 'ioredis';
 
-class RedisList {
+class List {
   #client: Redis
   #key: string
 
@@ -109,8 +109,12 @@ class RedisClient {
     await this.#client.quit();
   }
 
-  list(key: string): RedisList {
-    return new RedisList(key, this.#client)
+  pipeline(): ChainableCommander {
+    return this.#client.pipeline()
+  }
+
+  list(key: string): List {
+    return new List(key, this.#client)
   }
 }
 

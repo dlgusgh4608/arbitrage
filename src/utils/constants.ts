@@ -1,5 +1,3 @@
-export const UPBIT_TRADE = 'UPBIT_TRADE'
-export const UPBIT_ORDERBOOK = 'UPBIT_ORDERBOOK'
-export const BINANCE_TRADE = 'BINANCE_TRADE'
-export const BINANCE_ORDERBOOK = 'BINANCE_ORDERBOOK'
 export const EXCHANGE_RATE = 'EXCHANGE_RATE'
+export const SECOND_CRON = '* * * * * *'
+export const MINUTE_CRON = '59 * * * * *'

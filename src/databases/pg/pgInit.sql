@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS symbol_prices (
     domestic INTEGER,
     overseas REAL,
     exchange_rate REAL,
+    domestic_trade_at TIMESTAMP NOT NULL,
+    overseas_trade_at TIMESTAMP NOT NULL,
     PRIMARY KEY (symbol_id, created_at),
     FOREIGN KEY (symbol_id) REFERENCES symbols(id)
 );

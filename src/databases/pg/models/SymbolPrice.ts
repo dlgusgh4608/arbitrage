@@ -1,8 +1,10 @@
-export interface SymbolPriceType {
-    symbolId: number
-    createdAt: Date
+export interface SymbolPriceSymbolSchema {
+    symbol_id: number
+    created_at: Date
     premium: number
     domestic: number
     overseas: number
-    exchangeRate: number
+    exchange_rate: number
+    domestic_trade_at: Date
+    overseas_trade_at: Date
 }

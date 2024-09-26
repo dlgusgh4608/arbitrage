@@ -1,2 +1,2 @@
-export { SymbolType } from './Symbol'
-export { SymbolPriceType } from './SymbolPrice'
+export { SymbolSchema } from './Symbol'
+export { SymbolPriceSymbolSchema } from './SymbolPrice'

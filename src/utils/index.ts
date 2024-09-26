@@ -1,4 +1,5 @@
 import _ from 'lodash'
+import dayjs from 'dayjs'
 
 export const roundTo = _.curry((to: number, num: number) => Math.round(num * (10 ** to)) / (10 ** to))
 
@@ -9,3 +10,5 @@ export const krwToUsd = (krw: number, exchangeRate: number) => round4(krw / exch
 export const usdToKrw = (usd: number, exchangeRate: number) => round(usd / exchangeRate)
 
 export const getPremium = (upbit: number, binance: number) => round4((upbit / binance - 1) * 100)
+
+export const getTimeDifference = (domestic: Date | number, overseas: Date | number) => dayjs(domestic).diff(dayjs(overseas), 's')

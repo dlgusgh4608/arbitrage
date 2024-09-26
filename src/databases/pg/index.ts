@@ -1,61 +1,100 @@
-import fs from 'fs'
-import path from 'path'
-import { Pool } from 'pg'
+import { pool } from './dbConfig'
+import {
+  SymbolSchema,
+  SymbolPriceSymbolSchema
+} from './models'
 
-const initSQL = fs.readFileSync(path.join(__dirname, 'pgInit.sql'), 'utf8')
+export async function getAllSymbols(): Promise<SymbolSchema[]> {
+  return read<SymbolSchema>('symbols')
+}
 
-export const pool = new Pool({
-  host: process.env.PG_HOST,
-  port: parseInt(process.env.PG_PORT || '5432'),
-  user: process.env.PG_USERNAME,
-  password: process.env.PG_PASSWORD,
-  database: process.env.PG_DB_NAME,
-})
+// CRUD
+export async function create<T extends object>(
+  table: string,
+  partial: Partial<T>[] | Partial<T>,
+): Promise<void> {
+  const client = await pool.connect()
 
-async function checkExistsDatabase() {
   try {
-    const tempPool = new Pool({
-      host: process.env.PG_HOST,
-      port: parseInt(process.env.PG_PORT || '5432'),
-      user: process.env.PG_USERNAME,
-      password: process.env.PG_PASSWORD,
-      database: 'postgres',
-    })
-
-    const tempClient = await tempPool.connect()
-
-    const dbExistsResult = await tempClient.query(
-      `SELECT 1 FROM pg_database WHERE datname = $1`,
-      [process.env.PG_DB_NAME]
+    const { columnsStr, valuesStr, values } = getInsertList(partial)
+    
+    await client.query(
+      `
+      INSERT INTO ${table} (${columnsStr})
+      VALUES ${valuesStr};
+      `,
+      values
     )
-
-    if (dbExistsResult.rows.length === 0) {
-      console.log(`[PostgreSQL]\tdatabase is not exists (${process.env.PG_DB_NAME})`)
-      await tempClient.query(`CREATE DATABASE ${process.env.PG_DB_NAME}`)
-      console.log(`[PostgreSQL]\tdatabase is created (${process.env.PG_DB_NAME})`)
-    }else {
-      console.log(`[PostgreSQL]\tfind database (${process.env.PG_DB_NAME})`)
-    }
-
-    tempClient.release()
-    await tempPool.end()
   } catch (error) {
     throw error
+  } finally {
+    client.release()
   }
 }
 
-export const initializeDatabase = async () => {
+export async function read<T extends object>(
+  table: string,
+  columns?: string[],
+  where?: { column: string; value: string | number | boolean }[]
+): Promise<T[]> {
+  const client = await pool.connect()
+
+  const columnStr = columns ? columns.join(', ') : '*'
+  const whereStr = where
+  ? `WHERE ${where.map(({ column }, index) => `${column} = $${index + 1}`).join(' AND ')}`
+  : ';' 
+  
   try {
-    await checkExistsDatabase()
-    const client = await pool.connect()
+    const { rows } = await client.query(
+      `
+      SELECT ${columnStr}
+      FROM ${table}
+      ${whereStr}
+      `,
+      where?.map(({ value }) => value)
+    )
 
-    await client.query(initSQL)
-    console.log(`[PostgreSQL]\tdatabase is initialized (${process.env.PG_DB_NAME})`)
-
-    client.release()
-    console.log(`[PostgreSQL]\tdatabase is connected (${process.env.PG_DB_NAME})`)
+    return rows
   } catch (error) {
-    console.error(`[PostgreSQL]\tdatabase is not connected (${process.env.PG_DB_NAME})`, error)
-    process.exit(1)
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+function getInsertList<T extends object>(
+  partial: Partial<T>[] | Partial<T>
+): {
+  columnsStr: string
+  valuesStr: string
+  values: any[]
+} {
+  const isArray = Array.isArray(partial)
+
+  if(!isArray) {
+    const valuesStr = Object.keys(partial).map((_, idx) => `$${idx + 1}`).join(', ')
+    
+    return {
+      columnsStr: Object.keys(partial).join(', '),
+      valuesStr: `(${valuesStr})`,
+      values: Object.values(partial),
+    }
+  }
+  
+  if(partial.length < 1) throw new Error('Partial array is empty')
+
+  const column = Object.keys(partial[0])
+  const values = partial.map(item => Object.values(item)).flat()
+  const keyLength = column.length
+  const emptyArray = new Array(keyLength).fill(0)
+  const valuesStr = partial.map(
+    (_, idx) => 
+      `(${emptyArray.map((_, index) => `$${idx * keyLength + index + 1}`).join(', ')})`
+  ).join(', ')
+
+  return {
+    columnsStr: column.join(', '),
+    valuesStr,
+    values
   }
 }

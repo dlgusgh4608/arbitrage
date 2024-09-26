@@ -1,8 +1,5 @@
 import WebSocket from "ws";
-import EventEmitter from "events";
 import dayjs from "dayjs";
-
-import { BINANCE_ORDERBOOK, BINANCE_TRADE } from '@utils/constants'
 
 const BINANCE_URL: string = 'wss://fstream.binance.com/stream?streams=' // example "wss://fstream.binance.com/stream?streams=bnbusdt@aggTrade/btcusdt@markPrice"
 
@@ -62,9 +59,8 @@ export class Binance {
   #ws: WebSocket
   #run: boolean = false
   #url: string = ''
-
-  #emitterOut: EventEmitter | undefined
-  #emit: boolean = false
+  #orderbook: { [key: string]: BinanceOrderbook } = {}
+  #trade: { [key: string]: BinanceTrade } = {}
 
   constructor(coins: string[]) {
     const streamParams: string = [
@@ -116,14 +112,12 @@ export class Binance {
 
   #handleMessage = (message: Buffer) => {
     try {
-      if(!this.#emitterOut || !this.#emit) return
-      
       const jsonData: TradeOriginal | OrderbookOriginal = JSON.parse(message.toString()).data
 
       if(jsonData.e === 'aggTrade') {
-        this.#emitterOut.emit(BINANCE_TRADE, this.#transformAggTrade(jsonData))
+        this.#set('trade', this.#transformAggTrade(jsonData))
       }else if(jsonData.e === 'depthUpdate') {
-        this.#emitterOut.emit(BINANCE_ORDERBOOK, this.#transformOrderbook(jsonData))
+        this.#set('orderbook', this.#transformOrderbook(jsonData))
       }else {
         throw new Error('Received message type is invalid')
       }
@@ -145,11 +139,24 @@ export class Binance {
     })
   }
 
+  #set(type: 'orderbook' | 'trade', data: BinanceOrderbook | BinanceTrade) {
+    const key = data.symbol.replace('USDT', '').toLowerCase()
+    if(type === 'orderbook') {
+      this.#orderbook[key] = data as BinanceOrderbook
+    } else if(type === 'trade') {
+      this.#trade[key] = data as BinanceTrade
+    }
+  }
+
+  get(type: 'orderbook' | 'trade', symbol: string) {
+    if(type === 'orderbook') {
+      return this.#orderbook[symbol]
+    } else if(type === 'trade') {
+      return this.#trade[symbol]
+    }
+  }
+
   close() { this.#ws.close() }
-
-  bind(emitter = new EventEmitter()) { this.#emitterOut = emitter }
-
-  emit() { this.#emit = true }
 
   run(restart: boolean = true) {
     try {

@@ -1,8 +1,5 @@
-import EventEmitter from 'events';
 import WebSocket from 'ws'
 import dayjs from 'dayjs'
-
-import { UPBIT_ORDERBOOK, UPBIT_TRADE } from '@utils/constants'
 
 const UPBIT_URL = 'wss://api.upbit.com/websocket/v1'
 
@@ -58,23 +55,20 @@ export class Upbit {
   #subscribeMessage: SubscribeMessage[]
   #run: boolean = false
 
-  #orderbook: UpbitOrderbook | undefined
-  #trade: UpbitTrade | undefined
+  #orderbook: { [key: string]: UpbitOrderbook } = {}
+  #trade: { [key: string]: UpbitTrade } = {}
+  #errors: Error[] = []
 
-  #emitterOut: EventEmitter | undefined
-  #emitInterval: number = 500
-
-  constructor(coins: string[], emitInterval = 500) {
+  constructor(coins: string[], uniqueTicket: string) {
     this.#ws = new WebSocket(UPBIT_URL)
 
     this.#subscribeMessage = [
-      { ticket: 'upbitArbitrageTicket' },
+      { ticket: uniqueTicket },
       { type: 'trade', codes: coins.map(coin => ['KRW', coin.toUpperCase()].join('-')) },
       { type: 'orderbook', codes: coins.map(coin => ['KRW', coin.toUpperCase()].join('-')) },
       { format: 'DEFAULT' }
     ]
 
-    this.#emitInterval = emitInterval
     this.#run = false
   }
 
@@ -95,16 +89,16 @@ export class Upbit {
         const data = jsonData as UpbitOrderbook | UpbitTrade
 
         if (data.type === 'orderbook') { // is orderbook type
-          this.#orderbook = data
+          this.#set('orderbook', data)
         } else if(data.type === 'trade') { // is trade type
-          this.#trade = data
+          this.#set('trade', data)
         } else { // is Error
           throw new Error('Received message type is invalid')
         }
       }
       
     } catch (error) {
-      this.#emitterOut?.emit('error', error)
+      this.#errors.push(error as Error)
     }
   }
 
@@ -113,8 +107,6 @@ export class Upbit {
   #reallocation() {
     this.#ws = new WebSocket(UPBIT_URL)
     this.#run = false
-    this.#trade = undefined
-    this.#orderbook = undefined
   }
 
   #open() {
@@ -127,15 +119,21 @@ export class Upbit {
 
   close() { this.#ws.close() }
 
-  bind(emitter = new EventEmitter()) { this.#emitterOut = emitter }
+  #set(type: 'orderbook' | 'trade', data: UpbitOrderbook | UpbitTrade) {
+    const key = data.code.replace('KRW-', '').toLowerCase()
+    if(type === 'orderbook') {
+      this.#orderbook[key] = data as UpbitOrderbook
+    } else if(type === 'trade') {
+      this.#trade[key] = data as UpbitTrade
+    }
+  }
 
-  emit() {
-    setInterval(() => {
-      if(this.#emitterOut) {
-        if(this.#trade) this.#emitterOut.emit(UPBIT_TRADE, Object.freeze(this.#trade))
-        if(this.#orderbook) this.#emitterOut.emit(UPBIT_ORDERBOOK, Object.freeze(this.#orderbook))
-      }
-    }, this.#emitInterval)
+  get(type: 'orderbook' | 'trade', code: string) {
+    if(type === 'orderbook') {
+      return this.#orderbook[code]
+    } else if(type === 'trade') {
+      return this.#trade[code]
+    }
   }
 
   run(restart: boolean = true) {
