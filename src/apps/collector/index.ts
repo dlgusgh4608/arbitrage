@@ -1,43 +1,15 @@
 import EventEmitter from 'events'
-import {
-  Binance,
-  BinanceOrderbook,
-  BinanceTrade,
-} from '@modules/binance/public/websocket'
-
+import { Binance, BinanceOrderbook, BinanceTrade } from '@modules/binance/public/websocket'
 import { ExchangeRate } from '@modules/exchange-rate'
-import {
-  Upbit,
-  UpbitOrderbook,
-  UpbitTrade,
-} from '@modules/upbit/public/websocket'
-
-import {
-  EXCHANGE_RATE
-} from '@utils/constants'
-
+import { UpbitPublic } from '@modules/upbit'
+import { EXCHANGE_RATE } from '@utils/constants'
 import { EventBroker } from '@modules/event-broker'
-
 import { krwToUsd, getPremium, getTimeDifference } from '@utils'
-
 import dayjs from 'dayjs'
-
 import { SymbolSchema } from '@databases/pg/models'
 
-export interface Premium {
-  symbol: string // 심볼: BTC, ETH
-  premium: number // 김프
-  domestic: number // 업비트(KRW)
-  overseas: number // 바이낸스(USD)
-  exchangeRate: number // 환율
-  domesticTradeAt: Date // 국내 체결 시간
-  overseasTradeAt: Date // 해외 체결 시간
-}
-
-export interface Orderbook {
-  binance: BinanceOrderbook
-  upbit: UpbitOrderbook
-}
+import type { UpbitTrade, UpbitOrderbook, UpbitPublicWebsocketType } from '@modules/upbit'
+import type { Premium, Orderbook } from './types'
 
 const TIME_DIFFERENCE_LIMIT_SEC = 60
 const EXCHANGE_RATE_INTERVAL_TIME_TO_SEC = 10
@@ -49,8 +21,8 @@ export class Collector {
 
   #symbols: SymbolSchema[] = []
 
-  #upbit: Upbit | undefined
-  #binance: Binance | undefined
+  #upbit?: UpbitPublicWebsocketType
+  #binance?: Binance
   #exchangeRate: number = 0
   
   constructor(emitter: EventEmitter, symbols: SymbolSchema[]) {
@@ -144,7 +116,7 @@ export class Collector {
       if(symbolNames.length === 0) throw new Error('symbolNames is empty')
         
       // 각 class를 생성
-      const upbit = new Upbit(symbolNames, UPBIT_UNIQUE_SYMBOL)
+      const upbit = new UpbitPublic().websocket(symbolNames, UPBIT_UNIQUE_SYMBOL)
       const binance = new Binance(symbolNames)
       const exchangeRateApp = new ExchangeRate(EXCHANGE_RATE_INTERVAL_TIME_TO_SEC)
       

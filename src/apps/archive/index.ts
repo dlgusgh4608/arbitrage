@@ -1,20 +1,16 @@
 import { EventEmitter } from "stream";
 import { scheduleJob } from 'node-schedule'
-import { Premium } from '../collector'
 import { redisClient } from '@databases/redis'
 import { create } from '@databases/pg'
 import { SECOND_CRON, MINUTE_CRON } from '@utils/constants'
-
 import { getTimeDifference } from '@utils'
-
 import { SymbolSchema, SymbolPriceSymbolSchema } from '@databases/pg/models'
 import dayjs from 'dayjs'
 
-const TIME_DIFFERENCE_LIMIT_SEC = 60
+import type { Premium } from '../collector/types'
+import type { PremiumRedisBufferData } from './types'
 
-interface PremiumRedisBufferData extends Premium {
-  createdAt: Date
-}
+const TIME_DIFFERENCE_LIMIT_SEC = 60
 
 class RedisService {
   #symbols: SymbolSchema[] = []

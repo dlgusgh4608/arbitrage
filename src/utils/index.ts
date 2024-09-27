@@ -12,3 +12,11 @@ export const usdToKrw = (usd: number, exchangeRate: number) => round(usd / excha
 export const getPremium = (upbit: number, binance: number) => round4((upbit / binance - 1) * 100)
 
 export const getTimeDifference = (domestic: Date | number, overseas: Date | number) => dayjs(domestic).diff(dayjs(overseas), 's')
+
+export function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+export function removeUndefinedInObject(obj: { [key: string]: any }) {
+  return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined))
+}
