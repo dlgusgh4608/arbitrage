@@ -1,14 +1,18 @@
 import EventEmitter from 'events'
-import { Binance, BinanceOrderbook, BinanceTrade } from '@modules/binance/public/websocket'
 import { ExchangeRate } from '@modules/exchange-rate'
 import { UpbitPublic } from '@modules/upbit'
-import { EXCHANGE_RATE } from '@utils/constants'
+import { BinancePublic } from '@modules/binance'
 import { EventBroker } from '@modules/event-broker'
+
 import { krwToUsd, getPremium, getTimeDifference } from '@utils'
-import dayjs from 'dayjs'
+import { EXCHANGE_RATE } from '@utils/constants'
+
 import { SymbolSchema } from '@databases/pg/models'
 
+import dayjs from 'dayjs'
+
 import type { UpbitTrade, UpbitOrderbook, UpbitPublicWebsocketType } from '@modules/upbit'
+import type { BinancePublicWebsocketType, BinanceTrade, BinanceOrderbook } from '@modules/binance'
 import type { Premium, Orderbook } from './types'
 
 const TIME_DIFFERENCE_LIMIT_SEC = 60
@@ -22,7 +26,7 @@ export class Collector {
   #symbols: SymbolSchema[] = []
 
   #upbit?: UpbitPublicWebsocketType
-  #binance?: Binance
+  #binance?: BinancePublicWebsocketType
   #exchangeRate: number = 0
   
   constructor(emitter: EventEmitter, symbols: SymbolSchema[]) {
@@ -117,7 +121,7 @@ export class Collector {
         
       // 각 class를 생성
       const upbit = new UpbitPublic().websocket(symbolNames, UPBIT_UNIQUE_SYMBOL)
-      const binance = new Binance(symbolNames)
+      const binance = new BinancePublic().websocket(symbolNames)
       const exchangeRateApp = new ExchangeRate(EXCHANGE_RATE_INTERVAL_TIME_TO_SEC)
       
       // event broker 생성 후 연결

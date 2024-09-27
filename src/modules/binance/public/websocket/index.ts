@@ -3,59 +3,9 @@ import dayjs from "dayjs";
 
 const BINANCE_URL: string = 'wss://fstream.binance.com/stream?streams=' // example "wss://fstream.binance.com/stream?streams=bnbusdt@aggTrade/btcusdt@markPrice"
 
-interface TradeOriginal {
-  e: "aggTrade"    // Event type, which is a literal type
-  E: number        // Event time, which is a number
-  s: string        // Symbol, which is a string
-  a: number        // Aggregate trade ID, which is a number
-  p: string        // Price, which is a string
-  q: string        // Quantity, which is a string
-  f: number        // First trade ID, which is a number
-  l: number        // Last trade ID, which is a number
-  T: number        // Trade time, which is a number
-  m: boolean        // Is the buyer the market maker?, which is a boolean
-}
-export interface BinanceTrade {
-  type: "aggTrade";
-  eventTime: number;
-  symbol: string;
-  aggregateTradeId: number;
-  price: number;
-  quantity: number;
-  firstTradeId: number;
-  lastTradeId: number;
-  tradeTime: number;
-  isMarketMaker: boolean;
-}
+import type { BinanceTrade, BinanceOrderbook, TradeOriginal, OrderbookOriginal } from '../types'
 
-interface OrderbookOriginal {
-  e: "depthUpdate";   // Event type, which is a literal type
-  E: number;         // Event time, which is a number
-  T: number;         // Transaction time, which is a number
-  s: string;         // Symbol, which is a string
-  U: number;         // First update ID, which is a number
-  u: number;         // Final update ID, which is a number
-  pu: number;        // Previous update ID, which is a number
-  b: [string, string][]; // Bids to be updated, an array of arrays with string values
-  a: [string, string][]; // Asks to be updated, an array of arrays with string values
-}
-export interface BinanceOrderbook {
-  type: "depthUpdate";
-  eventTime: number;
-  transactionTime: number;
-  symbol: string;
-  firstUpdateID: number;
-  finalUpdateID: number;
-  previousUpdateID: number;
-  bids: Order[];
-  asks: Order[];
-}
-interface Order {
-  price: number,
-  quantity: number
-}
-
-export class Binance {
+export class BinancePublicWebsocket {
   #ws: WebSocket
   #run: boolean = false
   #url: string = ''
@@ -180,3 +130,5 @@ export class Binance {
     }
   }
 }
+
+export type BinancePublicWebsocketType = InstanceType<typeof BinancePublicWebsocket>

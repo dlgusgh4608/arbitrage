@@ -1,6 +1,3 @@
-import type { UpbitPublicWebsocketType } from './websocket'
-import type { UpbitPublicType } from '.'
-
 interface UpbitTrade {
   type: "trade"                   // 데이터 타입
   code: string                    // 거래 쌍 코드
@@ -36,4 +33,6 @@ interface UpbitOrderbook {
   level: number // 레벨
 }
 
-export type { UpbitTrade, UpbitOrderbook, UpbitPublicWebsocketType, UpbitPublicType }
+export type { UpbitPublicWebsocketType } from './websocket'
+export type { UpbitPublicType } from '.'
+export type { UpbitTrade, UpbitOrderbook }
