@@ -4,7 +4,7 @@ export interface SymbolPriceSymbolSchema {
     premium: number
     domestic: number
     overseas: number
-    exchange_rate: number
+    usd_to_krw: number
     domestic_trade_at: Date
     overseas_trade_at: Date
 }
