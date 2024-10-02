@@ -2,7 +2,6 @@ import { EventEmitter } from "stream";
 import { scheduleJob } from 'node-schedule'
 import { redisClient } from '@databases/redis'
 import { SymbolPrice } from '@models'
-const { createSymbolPrice } = SymbolPrice
 import { SECOND_CRON, MINUTE_CRON } from '@utils/constants'
 import { getTimeDifference } from '@utils'
 import dayjs from 'dayjs'
@@ -152,7 +151,7 @@ export class Archive {
               })
             )
   
-            await createSymbolPrice(payload)
+            await SymbolPrice.bulkInsert(payload)
             const stringToKB = Buffer.from(JSON.stringify(premium)).byteLength / 1024
             console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]\tArchive Premium to PG\t${key}\tlength: ${premium.length}\tstringifyKB: ${stringToKB}KB`)
           }

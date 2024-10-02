@@ -17,15 +17,40 @@ WHERE NOT EXISTS (
 -- User에 관련된 Table 생성
 CREATE TABLE IF NOT EXISTS user_roles (
     id SERIAL PRIMARY KEY,
-    role VARCHAR(10) CHECK (role IN ('god', 'diamond', 'platinum', 'gold', 'silver', 'bronze')) -- 등급 나눠서 구독?
+    role VARCHAR(10) CHECK (role IN ('god', 'vip', 'normal')) -- 음 ... god, vip, normal 3개로 나누는게 맞겠지...
+);
+
+-- 기본 등급 생성
+INSERT INTO user_roles (role)
+SELECT 'god'
+WHERE NOT EXISTS (
+    SELECT role
+    FROM user_roles
+    WHERE role = 'god'
+);
+
+INSERT INTO user_roles (role)
+SELECT 'vip'
+WHERE NOT EXISTS (
+    SELECT role
+    FROM user_roles
+    WHERE role = 'vip'
+);
+
+INSERT INTO user_roles (role)
+SELECT 'normal'
+WHERE NOT EXISTS (
+    SELECT role
+    FROM user_roles
+    WHERE role = 'normal'
 );
 
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(20) NOT NULL,
     email VARCHAR(40) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    salt uuid NOT NULL,
+    password VARCHAR(128) NOT NULL,
+    salt VARCHAR(32) NOT NULL,
     user_role_id INTEGER REFERENCES user_roles(id),
     selected_user_env_id INTEGER,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
