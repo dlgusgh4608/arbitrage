@@ -1,4 +1,6 @@
-export interface UserEnvSchema {
+import { pool } from '@databases/pg'
+
+interface UserEnvSchema {
     user_id: number
     exchange_id: number
     domestic_access_key: string
@@ -12,3 +14,8 @@ export interface UserEnvSchema {
     created_at: Date
     updated_at: Date
 }
+
+const UserEnv = {}
+
+export type { UserEnvSchema }
+export default UserEnv

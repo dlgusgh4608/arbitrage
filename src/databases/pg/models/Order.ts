@@ -1,4 +1,6 @@
-export interface OrderSchema {
+import { pool } from '@databases/pg'
+
+interface OrderSchema {
   id: number
   symbol_id: number
   user_id: number
@@ -6,3 +8,8 @@ export interface OrderSchema {
   net_profit_rate?: number
   created_at: Date
 }
+
+const Order = {}
+
+export type { OrderSchema }
+export default Order

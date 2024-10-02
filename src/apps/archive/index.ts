@@ -1,21 +1,22 @@
 import { EventEmitter } from "stream";
 import { scheduleJob } from 'node-schedule'
 import { redisClient } from '@databases/redis'
-import { create } from '@databases/pg'
+import { SymbolPrice } from '@models'
+const { createSymbolPrice } = SymbolPrice
 import { SECOND_CRON, MINUTE_CRON } from '@utils/constants'
 import { getTimeDifference } from '@utils'
-import { SymbolSchema, SymbolPriceSymbolSchema } from '@databases/pg/models'
 import dayjs from 'dayjs'
 
+import type { SymbolWithExchange, SymbolPriceSchema } from '@models/types'
 import type { Premium } from '../collector/types'
 import type { PremiumRedisBufferData } from './types'
 
 const TIME_DIFFERENCE_LIMIT_SEC = 60
 
 class RedisService {
-  #symbols: SymbolSchema[] = []
+  #symbols: SymbolWithExchange[] = []
   #client = redisClient
-  constructor(symbols: SymbolSchema[]) {
+  constructor(symbols: SymbolWithExchange[]) {
     this.#symbols = symbols
   }
 
@@ -84,10 +85,10 @@ class RedisService {
 export class Archive {
   #emitter: EventEmitter = new EventEmitter()
   #redisService?: RedisService
-  #symbols: SymbolSchema[] = []
+  #symbols: SymbolWithExchange[] = []
   #data: { [key: string]: Premium } = {}
 
-  constructor(emitter: EventEmitter, symbols: SymbolSchema[]) {
+  constructor(emitter: EventEmitter, symbols: SymbolWithExchange[]) {
     this.#emitter = emitter
     this.#symbols = symbols
     this.#redisService = new RedisService(symbols)
@@ -139,19 +140,19 @@ export class Archive {
             if(!premium) continue
 
             const payload = premium.map(
-              ({ domestic, exchangeRate, overseas, premium, createdAt, domesticTradeAt, overseasTradeAt }): SymbolPriceSymbolSchema => ({
+              ({ domestic, usdToKrw, overseas, premium, createdAt, domesticTradeAt, overseasTradeAt }): SymbolPriceSchema => ({
                 symbol_id: id,
                 created_at: dayjs(createdAt).toDate(),
                 premium: premium,
                 domestic: domestic,
                 overseas: overseas,
-                exchange_rate: exchangeRate,
+                usd_to_krw: usdToKrw,
                 domestic_trade_at: dayjs(domesticTradeAt).toDate(),
                 overseas_trade_at: dayjs(overseasTradeAt).toDate(),
               })
             )
   
-            await create<SymbolPriceSymbolSchema>('symbol_prices', payload)
+            await createSymbolPrice(payload)
             const stringToKB = Buffer.from(JSON.stringify(premium)).byteLength / 1024
             console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]\tArchive Premium to PG\t${key}\tlength: ${premium.length}\tstringifyKB: ${stringToKB}KB`)
           }

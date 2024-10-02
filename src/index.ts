@@ -1,7 +1,9 @@
 import './envInit' // dotenv initialize
 
 import { initializeDatabase } from './databases/pg/connect'
-import { getAllSymbols } from './databases/pg'
+
+import { Symbol } from '@models'
+const { getAllSymbols } = Symbol
 
 import { Collector } from './apps/collector'
 import { Archive } from './apps/archive'
@@ -13,7 +15,6 @@ async function main() {
     await initializeDatabase()
 
     const symbols = await getAllSymbols()
-
     const coreEmitter = new EventEmitter()
     const collector = new Collector(coreEmitter, symbols)
     const archive = new Archive(coreEmitter, symbols)

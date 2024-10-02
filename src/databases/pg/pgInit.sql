@@ -49,8 +49,18 @@ CREATE TABLE IF NOT EXISTS user_envs (
 );
 
 -- Users테이블에 Foreign키 추가
-ALTER TABLE users ADD CONSTRAINT fk_selected_user_env
-    FOREIGN KEY (selected_user_env_id) REFERENCES user_envs(id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.table_constraints
+        WHERE constraint_name = 'fk_selected_user_env'
+          AND table_name = 'users'
+    ) THEN
+        ALTER TABLE users ADD CONSTRAINT fk_selected_user_env
+            FOREIGN KEY (selected_user_env_id) REFERENCES user_envs(id);
+    END IF;
+END $$;
 
 -- 차트에 관련된 Table 생성
 CREATE TABLE IF NOT EXISTS symbols (

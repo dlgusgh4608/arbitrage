@@ -7,7 +7,7 @@ import { EventBroker } from '@modules/event-broker'
 import { krwToUsd, getPremium, getTimeDifference } from '@utils'
 import { EXCHANGE_RATE } from '@utils/constants'
 
-import { SymbolSchema } from '@databases/pg/models'
+import { SymbolWithExchange } from '@models/types'
 
 import dayjs from 'dayjs'
 
@@ -23,13 +23,13 @@ const UPBIT_UNIQUE_SYMBOL = 'ConnectUpbitSocketForCollector'
 export class Collector {
   #emitter: EventEmitter = new EventEmitter()
 
-  #symbols: SymbolSchema[] = []
+  #symbols: SymbolWithExchange[] = []
 
   #upbit?: UpbitPublicWebsocketType
   #binance?: BinancePublicWebsocketType
   #exchangeRate: number = 0
   
-  constructor(emitter: EventEmitter, symbols: SymbolSchema[]) {
+  constructor(emitter: EventEmitter, symbols: SymbolWithExchange[]) {
     this.#emitter = emitter
     this.#symbols = symbols
   }
@@ -77,7 +77,7 @@ export class Collector {
         premium,
         domestic: upbitPrice,
         overseas: binancePrice,
-        exchangeRate: fixedExchangeRate,
+        usdToKrw: fixedExchangeRate,
         domesticTradeAt: upbitLastTradeTime,
         overseasTradeAt: binanceLastTradeTime
       }

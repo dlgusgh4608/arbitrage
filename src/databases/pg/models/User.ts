@@ -1,4 +1,6 @@
-export interface UserSchema {
+import { pool } from '@databases/pg'
+
+interface UserSchema {
   id: number
   name: string
   email: string
@@ -9,3 +11,8 @@ export interface UserSchema {
   created_at: Date
   updated_at: Date
 }
+
+const User = {}
+
+export type { UserSchema }
+export default User

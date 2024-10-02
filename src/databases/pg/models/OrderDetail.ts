@@ -1,4 +1,6 @@
-export interface OrderDetailSchema {
+import { pool } from '@databases/pg'
+
+interface OrderDetailSchema {
     id: number
     order_id: number
     status: 'buy' | 'sell'
@@ -11,3 +13,8 @@ export interface OrderDetailSchema {
     overseas_trade_at: Date
     created_at: Date
 }
+
+const OrderDetail = {}
+
+export type { OrderDetailSchema }
+export default OrderDetail
