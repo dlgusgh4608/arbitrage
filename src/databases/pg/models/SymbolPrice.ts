@@ -1,4 +1,5 @@
 import { pool } from '@databases/pg'
+import { ModelObject, IModelObject } from './ModelObject'
 
 interface SymbolPriceSchema {
   symbol_id: number
@@ -11,38 +12,31 @@ interface SymbolPriceSchema {
   overseas_trade_at: Date
 }
 
-const SymbolPrice = {
-  bulkInsert: async (payload: SymbolPriceSchema[]) => {
-    if(!payload.length) throw new Error('payload is required')
-    
-    const client = await pool.connect()
-    try {
-      const keys = Object.keys(payload[0])
-      const keysStr = keys.join(', ')
-      const valuesStr = payload.map(
-        (_, idx) => `(
-          ${keys.map((_, index) => `$${idx * keys.length + index + 1}`).join(', ')}
-        )`
-      ).join(', ')
+class SymbolPrice extends ModelObject implements IModelObject {
+  constructor() { super() }
 
-      const values = payload.flatMap(item => Object.values(item))
+  Query = {
+    bulkInsert: (payload: SymbolPriceSchema[]) => {
+      const { keysStr, values, valuesStr } = this.generateInsertValues(payload)
 
-      const result = await client.query<SymbolPriceSchema>(
-        `
-        INSERT INTO symbol_prices (${keysStr})
-        VALUES ${valuesStr};
-        `,
-        values
-      )
-      
-      return result.rows
-    } catch (error) {
-      throw error
-    } finally {
-      await client.release()
+      const query = `INSERT INTO symbol_prices (${keysStr}) VALUES ${valuesStr};`
+
+      return { query, queryValues: values }
+    }
+  }
+
+  Exec = {
+    bulkInsert: async (payload: SymbolPriceSchema[]): Promise<void> => {
+      const { query, queryValues } = this.Query.bulkInsert(payload)
+
+      try {
+        await pool.query(query, queryValues)
+      } catch (error) {
+        throw error
+      }
     }
   }
 }
 
 export type { SymbolPriceSchema }
-export default SymbolPrice
+export default new SymbolPrice()

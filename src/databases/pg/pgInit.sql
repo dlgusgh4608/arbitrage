@@ -17,7 +17,7 @@ WHERE NOT EXISTS (
 -- User에 관련된 Table 생성
 CREATE TABLE IF NOT EXISTS user_roles (
     id SERIAL PRIMARY KEY,
-    role VARCHAR(10) CHECK (role IN ('god', 'vip', 'normal')) -- 음 ... god, vip, normal 3개로 나누는게 맞겠지...
+    role VARCHAR(6) CHECK (role IN ('god', 'vip', 'normal'))
 );
 
 -- 기본 등급 생성
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(128) NOT NULL,
     salt VARCHAR(32) NOT NULL,
     user_role_id INTEGER REFERENCES user_roles(id),
-    selected_user_env_id INTEGER,
+    -- selected_user_env_id INTEGER,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -73,25 +73,18 @@ CREATE TABLE IF NOT EXISTS user_envs (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Users테이블에 Foreign키 추가
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM information_schema.table_constraints
-        WHERE constraint_name = 'fk_selected_user_env'
-          AND table_name = 'users'
-    ) THEN
-        ALTER TABLE users ADD CONSTRAINT fk_selected_user_env
-            FOREIGN KEY (selected_user_env_id) REFERENCES user_envs(id);
-    END IF;
-END $$;
-
 -- 차트에 관련된 Table 생성
 CREATE TABLE IF NOT EXISTS symbols (
     id SERIAL PRIMARY KEY,
     name VARCHAR(10) NOT NULL,
     exchange_id INTEGER REFERENCES exchanges(id)
+);
+--!! User Status 테이블 생성 
+CREATE TABLE IF NOT EXISTS user_statuses (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id),
+    trade_user_env_id INTEGER REFERENCES user_envs(id),
+    trade_symbol_id INTEGER REFERENCES symbols(id),
+    trading BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS symbol_prices (

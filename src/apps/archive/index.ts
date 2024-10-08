@@ -151,7 +151,7 @@ export class Archive {
               })
             )
   
-            await SymbolPrice.bulkInsert(payload)
+            await SymbolPrice.Exec.bulkInsert(payload)
             const stringToKB = Buffer.from(JSON.stringify(premium)).byteLength / 1024
             console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]\tArchive Premium to PG\t${key}\tlength: ${premium.length}\tstringifyKB: ${stringToKB}KB`)
           }

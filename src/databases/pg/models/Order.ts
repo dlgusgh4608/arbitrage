@@ -1,4 +1,5 @@
 import { pool } from '@databases/pg'
+import { ModelObject, IModelObject } from './ModelObject'
 
 interface OrderSchema {
   id: number
@@ -9,7 +10,12 @@ interface OrderSchema {
   created_at: Date
 }
 
-const Order = {}
+class Order extends ModelObject implements IModelObject {
+  constructor() { super() }
+
+  Query = {}
+  Exec = {}
+}
 
 export type { OrderSchema }
-export default Order
+export default new Order()
