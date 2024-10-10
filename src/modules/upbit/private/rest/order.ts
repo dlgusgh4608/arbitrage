@@ -5,13 +5,13 @@ import { removeUndefinedInObject, wait } from '@utils'
 import type { IAuth, IOrderPost, IOrder } from '../types'
 
 export class Order {
-  #generateToken: (body: any) => IAuth
+  private generateToken: (body: any) => IAuth
   
   constructor(generateToken: (body: any) => IAuth) {
-    this.#generateToken = generateToken
+    this.generateToken = generateToken
   }
 
-  #postValidation({ symbol, side, volume, price, ord_type }: IOrderPost): void {
+  private postValidation({ symbol, side, volume, price, ord_type }: IOrderPost): void {
     if(!symbol) throw new Error('symbol is required')
     if(side !== 'bid' && side !== 'ask') throw new Error('side must be bid or ask')
     
@@ -33,7 +33,7 @@ export class Order {
 
   async post({ symbol, side, volume, price, ord_type }: IOrderPost): Promise<string> {
     try {
-      this.#postValidation({ symbol, side, volume, price, ord_type })
+      this.postValidation({ symbol, side, volume, price, ord_type })
       
       const market = symbol.match(isUpbitSymbol) ? symbol : `KRW-${symbol.toUpperCase()}`
       
@@ -45,7 +45,7 @@ export class Order {
         ord_type,
       })
 
-      const { Authorization } = this.#generateToken(body)
+      const { Authorization } = this.generateToken(body)
 
       const payload = {
         method: 'POST',
@@ -71,10 +71,10 @@ export class Order {
   async get(uuid: string): Promise<IOrder> {
     try {
       if(!uuid) throw new Error('uuid is required')
-
+      
       const body = { uuid }
       
-      const { Authorization, qs } = this.#generateToken(body)
+      const { Authorization, qs } = this.generateToken(body)
       
       const payload = {
         method: 'GET',
@@ -85,9 +85,13 @@ export class Order {
         data: body,
       }
 
-      await wait(3000) // post 이후 주문 상태가 바로 바뀌지 않아서 기다림
+      await wait(1000) // 재귀함수의 딜레이를 위한 1초
 
       const { data }: { data: IOrder } = await axios(payload)
+
+      if(data.state !== 'done' && data.state !== 'cancel') { // 전체 완료 혹은 취소 아님 재귀
+        return await this.get(uuid)
+      }
 
       return data
     } catch (error) {

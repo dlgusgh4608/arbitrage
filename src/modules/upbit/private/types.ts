@@ -35,7 +35,7 @@ interface IOrder {
   side: string;
   ord_type: string;
   price: string;
-  state: string;
+  state: 'wait' | 'watch' | 'done' | 'cancel';
   market: string;
   created_at: string;
   reserved_fee: string;

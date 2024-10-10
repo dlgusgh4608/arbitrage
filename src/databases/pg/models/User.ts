@@ -1,6 +1,6 @@
 import { pool } from '@databases/pg'
 import { ModelObject, IModelObject } from './ModelObject'
-import { generateHashPassword } from '@utils/crypto'
+import { generateHashPassword, decrypt } from '@utils/crypto'
 
 interface UserSchema {
   id: number
@@ -20,7 +20,7 @@ interface CreateUserPayload {
   user_role_id?: number
 }
 
-interface IUserEnv {
+interface IOriginUserEnv {
   domestic_access_key: string
   domestic_access_iv: string
   domestic_secret_key: string
@@ -31,9 +31,22 @@ interface IUserEnv {
   overseas_secret_iv: string
 }
 
-interface IUserTradeWithEnv {
+interface IUserEnv {
+  domestic_access_key: string
+  domestic_secret_key: string
+  overseas_access_key: string
+  overseas_secret_key: string
+}
+
+interface IOriginUserTradeWithEnv {
   id: number
-  user_role_id: number
+  symbol_id: number
+  user_env: IOriginUserEnv
+}
+
+export interface IUserTradeWithEnv {
+  id: number
+  symbol_id: number
   user_env: IUserEnv
 }
 
@@ -81,12 +94,12 @@ class User extends ModelObject implements IModelObject {
 
       return { query, queryValues: [id] }
     },
-    findTradeWithEnv: function() {
+    findWithEnv: function() {
       const query = 
       `
         SELECT
-          u.id AS id,
-          u.user_role_id AS user_role_id,
+          u.id AS user_id,
+          us.trade_symbol_id as symbol_id,
           json_build_object(
             'domestic_access_key', ue.domestic_access_key,
             'domestic_access_iv', ue.domestic_access_iv,
@@ -160,12 +173,30 @@ class User extends ModelObject implements IModelObject {
         throw error
       }
     },
-    findTradeWithEnv: async (): Promise<any> => {
+    findWithEnv: async (): Promise<IUserTradeWithEnv[]> => {
       try {
-        const { query } = this.Query.findTradeWithEnv()
-        const userTradeWithEnv = await pool.query(query)
+        const { query } = this.Query.findWithEnv()
+        const userTradeWithEnv = await pool.query<IOriginUserTradeWithEnv>(query)
+        const users = userTradeWithEnv.rows
+
+        const decodedUsers = users.map((user): IUserTradeWithEnv => {
+          const userEnv = user.user_env
+          const domestic_access_key = decrypt(userEnv.domestic_access_key, userEnv.domestic_access_iv)
+          const domestic_secret_key = decrypt(userEnv.domestic_secret_key, userEnv.domestic_secret_iv)
+          const overseas_access_key = decrypt(userEnv.overseas_access_key, userEnv.overseas_access_iv)
+          const overseas_secret_key = decrypt(userEnv.overseas_secret_key, userEnv.overseas_secret_iv)
+          return {
+            ...user,
+            user_env: {
+              domestic_access_key,
+              domestic_secret_key,
+              overseas_access_key,
+              overseas_secret_key,
+            }
+          }
+        })
         
-        return userTradeWithEnv.rows
+        return decodedUsers
       } catch (error) {
         throw error
       }

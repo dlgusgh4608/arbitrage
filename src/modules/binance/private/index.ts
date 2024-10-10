@@ -10,15 +10,15 @@ import type { ITokens, IAuth } from './types'
 const TOKEN_HASH_TYPE = 'SHA256'
 
 export class BinancePrivate {
-  #accessKey: string
-  #secretKey: string
+  private accessKey: string
+  private secretKey: string
 
   constructor({ accessKey, secretKey }: ITokens) {
-    this.#accessKey = accessKey
-    this.#secretKey = secretKey
+    this.accessKey = accessKey
+    this.secretKey = secretKey
   }
 
-  #generateTokenOfCurry = (accessKey: string, secretKey: string) => (body: { [key: string]: any } = {}): IAuth => {
+  private generateTokenOfCurry = (accessKey: string, secretKey: string) => (body: { [key: string]: any } = {}): IAuth => {
     const qs = Object.keys(body).length > 0 ? stringify(body) : ''
 
     const signature = createHmac(TOKEN_HASH_TYPE, secretKey).update(qs).digest('hex')
@@ -32,15 +32,15 @@ export class BinancePrivate {
   }
 
   account() {
-    return new Account(this.#generateTokenOfCurry(this.#accessKey, this.#secretKey))
+    return new Account(this.generateTokenOfCurry(this.accessKey, this.secretKey))
   }
 
   listenKey() {
-    return new ListenKey(this.#generateTokenOfCurry(this.#accessKey, this.#secretKey))
+    return new ListenKey(this.generateTokenOfCurry(this.accessKey, this.secretKey))
   }
 
   order() {
-    return new Order(this.#generateTokenOfCurry(this.#accessKey, this.#secretKey))
+    return new Order(this.generateTokenOfCurry(this.accessKey, this.secretKey))
   }
 
   webSocket(reconnect: boolean = true) {

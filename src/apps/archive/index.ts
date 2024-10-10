@@ -1,4 +1,4 @@
-import { EventEmitter } from "stream";
+import { EventBroker } from '@modules/event-broker'
 import { scheduleJob } from 'node-schedule'
 import { redisClient } from '@databases/redis'
 import { SymbolPrice } from '@models'
@@ -13,18 +13,18 @@ import type { PremiumRedisBufferData } from './types'
 const TIME_DIFFERENCE_LIMIT_SEC = 60
 
 class RedisService {
-  #symbols: SymbolWithExchange[] = []
-  #client = redisClient
+  private symbols: SymbolWithExchange[] = []
+  private client = redisClient
   constructor(symbols: SymbolWithExchange[]) {
-    this.#symbols = symbols
+    this.symbols = symbols
   }
 
   async push(data: { [key: string]: Premium }): Promise<void> {
     try {
-      const pipeline = this.#client.pipeline()
+      const pipeline = this.client.pipeline()
       const now = dayjs().toDate()
 
-      for (const symbol of this.#symbols) {
+      for (const symbol of this.symbols) {
         const { name, domestic, overseas } = symbol
         const key = [name, domestic, overseas].join('-')
         
@@ -53,10 +53,10 @@ class RedisService {
     try {
       const payload: { [key: string]: T[] } = {}
       
-      for (const symbol of this.#symbols) {
+      for (const symbol of this.symbols) {
         const { name, domestic, overseas } = symbol
         const key = [name, domestic, overseas].join('-')
-        const response = await this.#client.list(key).popMultiple<T>(count)
+        const response = await this.client.list(key).popMultiple<T>(count)
 
         if(response.length > 0) payload[key] = response
       }
@@ -69,10 +69,10 @@ class RedisService {
 
   async clearList(): Promise<void> {
     try {
-      for (const symbol of this.#symbols) {
+      for (const symbol of this.symbols) {
         const { name, domestic, overseas } = symbol
         const key = [name, domestic, overseas].join('-')
-        await this.#client.list(key).delete()
+        await this.client.list(key).delete()
         console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]\tRedis List Clear\t${key}`)
       }
     } catch (error) {
@@ -82,40 +82,40 @@ class RedisService {
 }
 
 export class Archive {
-  #emitter: EventEmitter = new EventEmitter()
-  #redisService?: RedisService
-  #symbols: SymbolWithExchange[] = []
-  #data: { [key: string]: Premium } = {}
+  private emitter!: EventBroker
+  private redisService?: RedisService
+  private symbols: SymbolWithExchange[] = []
+  private data: { [key: string]: Premium } = {}
 
-  constructor(emitter: EventEmitter, symbols: SymbolWithExchange[]) {
-    this.#emitter = emitter
-    this.#symbols = symbols
-    this.#redisService = new RedisService(symbols)
+  constructor(emitter: EventBroker, symbols: SymbolWithExchange[]) {
+    this.emitter = emitter
+    this.symbols = symbols
+    this.redisService = new RedisService(symbols)
   }
 
-  #onSymbolTrade = (): void => {
-    for(const symbol of this.#symbols) {
+  private onSymbolTrade = (): void => {
+    for(const symbol of this.symbols) {
       try {
         const { name, domestic, overseas } = symbol
         const key = [name, domestic, overseas].join('-')
         const customerKey = [key, 'trade'].join('-')
-        this.#emitter.on(customerKey, (data: Premium) => { this.#data[key] = data })
+        this.emitter.on(customerKey, (data: Premium) => { this.data[key] = data })
       } catch (error) {
         throw error
       }
     }
   }
 
-  #clearData = (): void => {
-    this.#data = {}
+  private clearData = (): void => {
+    this.data = {}
   }
   
-  #pushRedisServiceOnSec = (): void => {
+  private pushRedisServiceOnSec = (): void => {
     try { 
       scheduleJob(SECOND_CRON, async () => {
         try {
-          await this.#redisService?.push(this.#data)
-          this.#clearData()
+          await this.redisService!.push(this.data)
+          this.clearData()
         } catch (error) {
           throw error
         }
@@ -125,13 +125,13 @@ export class Archive {
     }
   }
 
-  #insertRedisToPgOnMin = (): void => {
+  private insertRedisToPgOnMin = (): void => {
     try {
       scheduleJob(MINUTE_CRON, async () => {
         try {
-          const response = await this.#redisService?.popMultiple<PremiumRedisBufferData>(60)
+          const response = await this.redisService!.popMultiple<PremiumRedisBufferData>(60)
   
-          for (const symbol of this.#symbols) {
+          for (const symbol of this.symbols) {
             const { id, name, domestic, overseas } = symbol
             const key = [name, domestic, overseas].join('-')
             const premium = response?.[key]
@@ -166,10 +166,10 @@ export class Archive {
 
   async run() {
     try {
-      await this.#redisService?.clearList()
-      this.#onSymbolTrade()
-      this.#pushRedisServiceOnSec()
-      this.#insertRedisToPgOnMin()
+      await this.redisService?.clearList()
+      this.onSymbolTrade()
+      this.pushRedisServiceOnSec()
+      this.insertRedisToPgOnMin()
     } catch (error) {
       throw error
     }

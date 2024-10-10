@@ -6,11 +6,11 @@ const BINANCE_URL: string = 'wss://fstream.binance.com/stream?streams=' // examp
 import type { BinanceTrade, BinanceOrderbook, TradeOriginal, OrderbookOriginal } from '../types'
 
 export class BinancePublicWebsocket {
-  #ws: WebSocket
-  #run: boolean = false
-  #url: string = ''
-  #orderbook: { [key: string]: BinanceOrderbook } = {}
-  #trade: { [key: string]: BinanceTrade } = {}
+  private ws: WebSocket
+  private running: boolean = false
+  private url: string = ''
+  private orderbook: { [key: string]: BinanceOrderbook } = {}
+  private trade: { [key: string]: BinanceTrade } = {}
 
   constructor(coins: string[]) {
     const streamParams: string = [
@@ -20,18 +20,18 @@ export class BinancePublicWebsocket {
 
     const url: string = BINANCE_URL.concat(streamParams)
     
-    this.#url = url
+    this.url = url
 
-    this.#ws = new WebSocket(url)
+    this.ws = new WebSocket(url)
   }
 
-  #open() {
-    this.#ws.on('open', () => {
+  private open() {
+    this.ws.on('open', () => {
       console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]\tBinance WebSocket Connected`)
     })
   }
 
-  #transformAggTrade(original: TradeOriginal): BinanceTrade {
+  private transformAggTrade(original: TradeOriginal): BinanceTrade {
     return {
       type: original.e,
       eventTime: original.E,
@@ -46,7 +46,7 @@ export class BinancePublicWebsocket {
     };
   }
 
-  #transformOrderbook(original: OrderbookOriginal): BinanceOrderbook {
+  private transformOrderbook(original: OrderbookOriginal): BinanceOrderbook {
     return {
       type: original.e,
       eventTime: original.E,
@@ -60,14 +60,14 @@ export class BinancePublicWebsocket {
     };
   }
 
-  #handleMessage = (message: Buffer) => {
+  private handleMessage = (message: Buffer) => {
     try {
       const jsonData: TradeOriginal | OrderbookOriginal = JSON.parse(message.toString()).data
 
       if(jsonData.e === 'aggTrade') {
-        this.#set('trade', this.#transformAggTrade(jsonData))
+        this.set('trade', this.transformAggTrade(jsonData))
       }else if(jsonData.e === 'depthUpdate') {
-        this.#set('orderbook', this.#transformOrderbook(jsonData))
+        this.set('orderbook', this.transformOrderbook(jsonData))
       }else {
         throw new Error('Received message type is invalid')
       }
@@ -76,55 +76,55 @@ export class BinancePublicWebsocket {
     }
   }
 
-  #receiveMessage() { this.#ws.on('message', this.#handleMessage) }
+  private receiveMessage() { this.ws.on('message', this.handleMessage) }
 
-  #reallocation() {
-    this.#ws = new WebSocket(this.#url)
-    this.#run = false
+  private reallocation() {
+    this.ws = new WebSocket(this.url)
+    this.running = false
   }
 
-  #ping() {
-    this.#ws.on('ping', (e: Buffer) => {
-      this.#ws.pong()
+  private ping() {
+    this.ws.on('ping', (e: Buffer) => {
+      this.ws.pong()
     })
   }
 
-  #set(type: 'orderbook' | 'trade', data: BinanceOrderbook | BinanceTrade) {
+  private set(type: 'orderbook' | 'trade', data: BinanceOrderbook | BinanceTrade) {
     const key = data.symbol.replace('USDT', '').toLowerCase()
     if(type === 'orderbook') {
-      this.#orderbook[key] = data as BinanceOrderbook
+      this.orderbook[key] = data as BinanceOrderbook
     } else if(type === 'trade') {
-      this.#trade[key] = data as BinanceTrade
+      this.trade[key] = data as BinanceTrade
     }
   }
 
   get(type: 'orderbook' | 'trade', symbol: string) {
     if(type === 'orderbook') {
-      return this.#orderbook[symbol]
+      return this.orderbook[symbol]
     } else if(type === 'trade') {
-      return this.#trade[symbol]
+      return this.trade[symbol]
     }
   }
 
-  close() { this.#ws.close() }
+  close() { this.ws.close() }
 
   run(restart: boolean = true) {
     try {
-      if (this.#run) throw new Error('This socket is already running!')
-      this.#run = true
+      if (this.running) throw new Error('This socket is already running!')
+      this.running = true
 
-      this.#receiveMessage()
+      this.receiveMessage()
 
-      this.#ping()
+      this.ping()
 
-      this.#ws.on('close', () => {
+      this.ws.on('close', () => {
         console.log('Binance WebSocket Disconnected')
-        this.#reallocation()
+        this.reallocation()
 
         if(restart) this.run(restart)
       })
 
-      this.#open()
+      this.open()
     } catch (error) {
       throw error
     }

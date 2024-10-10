@@ -1,3 +1,7 @@
-export const EXCHANGE_RATE = 'EXCHANGE_RATE'
+export const USD_TO_KRW = 'USD_TO_KRW'
 export const SECOND_CRON = '* * * * * *'
 export const MINUTE_CRON = '59 * * * * *'
+export const BINANCE_LISTEN_KEY_EXPIRED = 'listenKeyExpired'
+export const BINANCE_SELL = 'BINANCE_SELL'
+export const BINANCE_BUY = 'BINANCE_BUY'
+export const BINANCE_FUNDING_FEE = 'BINANCE_FUNDING_FEE'

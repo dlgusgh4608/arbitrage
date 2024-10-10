@@ -3,6 +3,8 @@ import dayjs from 'dayjs'
 
 import { round8 } from '@utils'
 
+import { BINANCE_BUY, BINANCE_FUNDING_FEE, BINANCE_LISTEN_KEY_EXPIRED, BINANCE_SELL } from '@utils/constants'
+
 import type {
   IOriginOrderTradeUpdate,
   IOriginAccountUpdate,
@@ -15,29 +17,26 @@ const ORDER_TICKER_TIMEOUT = 1000 * 3
 export class BinancePrivateWebsocketHandler extends EventEmitter {
   private orderMap: Map<string, IOrderTrade[]> = new Map()
   private orderTickerMap: Map<string, ReturnType<typeof setTimeout>> = new Map()
-
-  protected types = {
-    fundingFee: 'fundingFee',
-    sell: 'sell',
-    buy: 'buy',
-    listenKeyExpired: 'listenKeyExpired'
-  }
   
   constructor() { super() }
 
+  private emitKeyForSide(orderTrade: IOrderTrade) {
+    return orderTrade.side === 'BUY' ? BINANCE_BUY : BINANCE_SELL
+  }
+  
   private filledOrderTrade(orderId: string, payload: IOrderTrade) {
     const oldOrder = this.orderMap.get(orderId)
 
-    if(oldOrder) {
+    if(oldOrder) { // 부분 체결 후 전부 체결
       const orderPayload = this.calculateOrders([...oldOrder, payload])
-      this.emit('orderUpdate', orderPayload)
+      this.emit(this.emitKeyForSide(orderPayload), orderPayload)
       const currentOrderTicker = this.orderTickerMap.get(orderId)
       
       clearTimeout(currentOrderTicker) // 타이머 종료
       this.orderMap.delete(orderId) // orderMap 제거
       this.orderTickerMap.delete(orderId) // orderTicker 제거
-    }else {
-      this.emit('orderUpdate', payload)
+    }else { // 한번에 전부 체결
+      this.emit(this.emitKeyForSide(payload), payload)
     }
   }
 
@@ -110,7 +109,7 @@ export class BinancePrivateWebsocketHandler extends EventEmitter {
           fees: fundingFees
         }
 
-        this.emit(this.types.fundingFee, payload)
+        this.emit(BINANCE_FUNDING_FEE, payload)
         break
       } // 추후에 다른 타입 추가
     }
@@ -119,7 +118,7 @@ export class BinancePrivateWebsocketHandler extends EventEmitter {
   
   protected handleListenKeyExpired() {
     console.log(`listenKey expired!`)
-    this.emit(this.types.listenKeyExpired, null)
+    this.emit(BINANCE_LISTEN_KEY_EXPIRED, null)
   }
 
   private calculateOrders(orders: IOrderTrade[]): IOrderTrade {
@@ -147,10 +146,11 @@ export class BinancePrivateWebsocketHandler extends EventEmitter {
   private setTicker(orderId: string) {
     const ticker = setTimeout(() => {
       const orders = this.orderMap.get(orderId)
+      const payload = this.calculateOrders(orders!)
 
       this.orderMap.delete(orderId)
       this.orderTickerMap.delete(orderId)
-      this.emit('orderUpdate', this.calculateOrders(orders!))
+      this.emit(this.emitKeyForSide(payload), payload)
     }, ORDER_TICKER_TIMEOUT)
 
     this.orderTickerMap.set(orderId, ticker)

@@ -6,9 +6,11 @@ interface OrderDetailSchema {
   order_id: number
   status: 'buy' | 'sell'
   premium: number
-  domestic: number
+  domestic_price: number
+  domestic_quantity: number
   domestic_commission: number
-  overseas: number
+  overseas_price: number
+  overseas_quantity: number
   overseas_commission: number
   usd_to_krw: number
   is_maker: boolean

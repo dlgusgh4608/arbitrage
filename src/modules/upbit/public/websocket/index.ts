@@ -15,28 +15,28 @@ interface Pong {
 }
 
 export class UpbitPublicWebsocket {
-  #ws: WebSocket
-  #subscribeMessage: SubscribeMessage[]
-  #run: boolean = false
+  private ws: WebSocket
+  private subscribeMessage: SubscribeMessage[]
+  private running: boolean = false
 
-  #orderbook: { [key: string]: UpbitOrderbook } = {}
-  #trade: { [key: string]: UpbitTrade } = {}
-  #errors: Error[] = []
+  private orderbook: { [key: string]: UpbitOrderbook } = {}
+  private trade: { [key: string]: UpbitTrade } = {}
+  private errors: Error[] = []
 
   constructor(coins: string[], uniqueTicket: string) {
-    this.#ws = new WebSocket(UPBIT_URL)
+    this.ws = new WebSocket(UPBIT_URL)
 
-    this.#subscribeMessage = [
+    this.subscribeMessage = [
       { ticket: uniqueTicket },
       { type: 'trade', codes: coins.map(coin => ['KRW', coin.toUpperCase()].join('-')) },
       { type: 'orderbook', codes: coins.map(coin => ['KRW', coin.toUpperCase()].join('-')) },
       { format: 'DEFAULT' }
     ]
 
-    this.#run = false
+    this.running = false
   }
 
-  #handleMessage = (message: Buffer) => {
+  private handleMessage = (message: Buffer) => {
     try {
       const jsonData: UpbitOrderbook | UpbitTrade | Pong = JSON.parse(message.toString())
       if((jsonData as Pong).status) {
@@ -45,7 +45,7 @@ export class UpbitPublicWebsocket {
         if(pongData.status !== 'UP') {
           this.close()
         }else {
-          this.#ws.send('PING')
+          this.ws.send('PING')
         }
       } else {
         if (!(jsonData as UpbitOrderbook | UpbitTrade).type) throw new Error('Received message does not have type')
@@ -53,68 +53,68 @@ export class UpbitPublicWebsocket {
         const data = jsonData as UpbitOrderbook | UpbitTrade
 
         if (data.type === 'orderbook') { // is orderbook type
-          this.#set('orderbook', data)
+          this.set('orderbook', data)
         } else if(data.type === 'trade') { // is trade type
-          this.#set('trade', data)
+          this.set('trade', data)
         } else { // is Error
           throw new Error('Received message type is invalid')
         }
       }
       
     } catch (error) {
-      this.#errors.push(error as Error)
+      this.errors.push(error as Error)
     }
   }
 
-  #receiveMessage() { this.#ws.on('message', this.#handleMessage) }
+  private receiveMessage() { this.ws.on('message', this.handleMessage) }
 
-  #reallocation() {
-    this.#ws = new WebSocket(UPBIT_URL)
-    this.#run = false
+  private reallocation() {
+    this.ws = new WebSocket(UPBIT_URL)
+    this.running = false
   }
 
-  #open() {
-    this.#ws.on('open', () => {
+  private open() {
+    this.ws.on('open', () => {
       console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]\tUpbit WebSocket Connected`)
-      this.#ws.send(JSON.stringify(this.#subscribeMessage))
-      this.#ws.send('PING')
+      this.ws.send(JSON.stringify(this.subscribeMessage))
+      this.ws.send('PING')
     })
   }
 
-  close() { this.#ws.close() }
+  close() { this.ws.close() }
 
-  #set(type: 'orderbook' | 'trade', data: UpbitOrderbook | UpbitTrade) {
+  private set(type: 'orderbook' | 'trade', data: UpbitOrderbook | UpbitTrade) {
     const key = data.code.replace('KRW-', '').toLowerCase()
     if(type === 'orderbook') {
-      this.#orderbook[key] = data as UpbitOrderbook
+      this.orderbook[key] = data as UpbitOrderbook
     } else if(type === 'trade') {
-      this.#trade[key] = data as UpbitTrade
+      this.trade[key] = data as UpbitTrade
     }
   }
 
   get(type: 'orderbook' | 'trade', code: string) {
     if(type === 'orderbook') {
-      return this.#orderbook[code]
+      return this.orderbook[code]
     } else if(type === 'trade') {
-      return this.#trade[code]
+      return this.trade[code]
     }
   }
 
   run(restart: boolean = true) {
     try {
-      if (this.#run) throw new Error('This socket is already running!')
-      this.#run = true
+      if (this.running) throw new Error('This socket is already running!')
+      this.running = true
   
-      this.#ws.on('close', () => {
+      this.ws.on('close', () => {
         console.log(`Upbit WebSocket Disconnected`)
-        this.#reallocation()
+        this.reallocation()
 
         if(restart) this.run(restart)
       })
 
-      this.#receiveMessage()
+      this.receiveMessage()
   
-      this.#open()
+      this.open()
     } catch (error) {
       throw error
     }

@@ -10,15 +10,15 @@ import type { ITokens, IAuth } from './types'
 const TOKEN_HASH_TYPE = 'SHA512'
 
 export class UpbitPrivate {
-  #accessKey: string
-  #secretKey: string
+  private accessKey: string
+  private secretKey: string
 
   constructor({ accessKey, secretKey }: ITokens) {
-    this.#accessKey = accessKey
-    this.#secretKey = secretKey
+    this.accessKey = accessKey
+    this.secretKey = secretKey
   }
 
-  #generateTokenOfCurry = ({ accessKey, secretKey }: ITokens) => (body: { [key: string]: any }): IAuth => {
+  private generateTokenOfCurry = ({ accessKey, secretKey }: ITokens) => (body: { [key: string]: any }): IAuth => {
     const qs = stringify(body)
 
     const hash = createHash(TOKEN_HASH_TYPE)
@@ -42,7 +42,7 @@ export class UpbitPrivate {
   }
 
   order() {
-    return new Order(this.#generateTokenOfCurry({ accessKey: this.#accessKey, secretKey: this.#secretKey }))
+    return new Order(this.generateTokenOfCurry({ accessKey: this.accessKey, secretKey: this.secretKey }))
   }
 }
 

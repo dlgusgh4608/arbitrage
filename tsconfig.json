@@ -11,7 +11,8 @@
       "@modules/*": ["src/modules/*"],
       "@databases/*": ["src/databases/*"],
       "@models": ["src/databases/pg/models/index.ts"],
-      "@models/*": ["src/databases/pg/models/*"]
+      "@models/*": ["src/databases/pg/models/*"],
+      "@apps/*": ["src/apps/*"]
     },
     "strict": true, //strict 옵션 활성화
     "moduleResolution": "node", //모듈 해석 방법 설정: 'node' (Node.js)

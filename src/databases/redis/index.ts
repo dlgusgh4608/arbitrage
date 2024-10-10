@@ -1,17 +1,17 @@
 import Redis, { ChainableCommander } from 'ioredis';
 
 class List {
-  #client: Redis
-  #key: string
+  private client: Redis
+  private key: string
 
   constructor(key: string, client: Redis) {
-    this.#client = client
-    this.#key = key
+    this.client = client
+    this.key = key
   }
   
   async get<T extends object>(startIndex: number, endIndex: number): Promise<T[]> {
     try {
-      const response = await this.#client.lrange(this.#key, startIndex, endIndex)
+      const response = await this.client.lrange(this.key, startIndex, endIndex)
       return response.map((item) => JSON.parse(item)) as T[]
     } catch (error) {
       throw error
@@ -20,7 +20,7 @@ class List {
   
   async getAll<T extends object>(): Promise<T[]> {
     try {
-      const response = await this.#client.lrange(this.#key, 0, -1)
+      const response = await this.client.lrange(this.key, 0, -1)
       return response.map((item) => JSON.parse(item)) as T[]
     } catch (error) {
       throw error
@@ -29,7 +29,7 @@ class List {
 
   async push<T extends object>(data: T): Promise<number> {
     try {
-      const response = await this.#client.rpush(this.#key, JSON.stringify(data))
+      const response = await this.client.rpush(this.key, JSON.stringify(data))
       return response
     } catch (error) {
       throw error
@@ -38,7 +38,7 @@ class List {
 
   async unshift<T extends object>(data: T): Promise<number> {
     try {
-      const response = await this.#client.lpush(this.#key, JSON.stringify(data))
+      const response = await this.client.lpush(this.key, JSON.stringify(data))
       return response
     } catch (error) {
       throw error
@@ -47,7 +47,7 @@ class List {
 
   async shift<T extends object>(): Promise<T | null> {
     try {
-      const response = await this.#client.lpop(this.#key)
+      const response = await this.client.lpop(this.key)
 
       if (response === null) return null
 
@@ -59,7 +59,7 @@ class List {
 
   async pop<T extends object>(): Promise<T | null> {
     try {
-      const response = await this.#client.rpop(this.#key)
+      const response = await this.client.rpop(this.key)
 
       if (response === null) return null
 
@@ -87,7 +87,7 @@ class List {
   
   async delete() {
     try {
-      await this.#client.del(this.#key)
+      await this.client.del(this.key)
     } catch (error) {
       throw error
     }
@@ -95,10 +95,10 @@ class List {
 }
 
 class RedisClient {
-  #client: Redis;
+  private client: Redis;
 
   constructor() {
-    this.#client = new Redis({
+    this.client = new Redis({
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379'),
       password: process.env.REDIS_PASSWORD,
@@ -106,15 +106,15 @@ class RedisClient {
   }
 
   async close(): Promise<void> {
-    await this.#client.quit();
+    await this.client.quit();
   }
 
   pipeline(): ChainableCommander {
-    return this.#client.pipeline()
+    return this.client.pipeline()
   }
 
   list(key: string): List {
-    return new List(key, this.#client)
+    return new List(key, this.client)
   }
 }
 

@@ -126,7 +126,7 @@ interface IFundingFees {
 
 interface IOrderTrade {
   symbol: string
-  side: string
+  side: 'BUY' | 'SELL'
   price: number
   quantity: number
   commission: number

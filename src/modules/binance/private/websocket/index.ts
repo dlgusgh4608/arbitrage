@@ -3,6 +3,8 @@ import EventEmitter from 'events'
 
 import { BinancePrivateWebsocketHandler } from './handler'
 
+import { BINANCE_BUY, BINANCE_FUNDING_FEE, BINANCE_LISTEN_KEY_EXPIRED, BINANCE_SELL } from '@utils/constants'
+
 import type {
   BinancePrivateType,
   IOriginOrderTradeUpdate,
@@ -91,10 +93,10 @@ export class BinancePrivateWebsocket extends BinancePrivateWebsocketHandler {
     if(!this.emitterOut) throw new Error('bind first!')
     
     this
-      .on(this.types.listenKeyExpired, () => this.close())
-      .on(this.types.fundingFee, (data: IFundingFees) => this.emitterOut!.emit(this.types.fundingFee, data))
-      .on(this.types.sell, (data: IOrderTrade) => this.emitterOut!.emit(this.types.sell, data))
-      .on(this.types.buy, (data: IOrderTrade) => this.emitterOut!.emit(this.types.buy, data))
+      .on(BINANCE_LISTEN_KEY_EXPIRED, () => this.close())
+      .on(BINANCE_FUNDING_FEE, (data: IFundingFees) => this.emitterOut!.emit(BINANCE_FUNDING_FEE, data))
+      .on(BINANCE_SELL, (data: IOrderTrade) => this.emitterOut!.emit(BINANCE_SELL, data))
+      .on(BINANCE_BUY, (data: IOrderTrade) => this.emitterOut!.emit(BINANCE_BUY, data))
   }
 
   private async getListenKey(): Promise<string> {
