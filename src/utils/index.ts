@@ -23,7 +23,7 @@ export const ceil8 = ceilTo(8)
 export const ceil12 = ceilTo(16)
 
 export const krwToUsd = (krw: number, exchangeRate: number) => round4(krw / exchangeRate)
-export const usdToKrw = (usd: number, exchangeRate: number) => round(usd / exchangeRate)
+export const usdToKrw = (usd: number, exchangeRate: number) => round(usd * exchangeRate)
 
 export const getPremium = (domestic: number, overseas: number) => round4((domestic / overseas - 1) * 100)
 

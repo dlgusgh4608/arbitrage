@@ -12,22 +12,26 @@ export class Order {
   }
 
   private postValidation({ symbol, side, volume, price, ord_type }: IOrderPost): void {
-    if(!symbol) throw new Error('symbol is required')
-    if(side !== 'bid' && side !== 'ask') throw new Error('side must be bid or ask')
-    
-    switch(ord_type) {
-      case 'limit':
-        if(!volume) throw new Error('if ord_type is limit, volume is required')
-        if(!price) throw new Error('if ord_type is limit, price is required')
-        break
-      case 'price':
-        if(!price) throw new Error('if ord_type is price, price is required')
-        break
-      case 'market':
-        if(!volume) throw new Error('if ord_type is market, volume is required')
-        break
-      default:
-        throw new Error('ord_type must be limit, price, or market')
+    try {
+      if(!symbol) throw new Error('symbol is required')
+      if(side !== 'bid' && side !== 'ask') throw new Error('side must be bid or ask')
+      
+      switch(ord_type) {
+        case 'limit':
+          if(!volume) throw new Error('if ord_type is limit, volume is required')
+          if(!price) throw new Error('if ord_type is limit, price is required')
+          break
+        case 'price':
+          if(!price) throw new Error('if ord_type is price, price is required')
+          break
+        case 'market':
+          if(!volume) throw new Error('if ord_type is market, volume is required')
+          break
+        default:
+          throw new Error('ord_type must be limit, price, or market')
+      }
+    } catch (error) {
+      throw error
     }
   }
 
@@ -61,10 +65,13 @@ export class Order {
       return data.uuid // 나중에 조회 할 때 필요
     } catch (error) {
       if(error instanceof AxiosError) {
-        throw error.response?.data ? error.response?.data : error.response
+        const e = error.response?.data ? error.response?.data : error.response
+        console.log(e)
+        throw error
+      }else {
+        console.log(error)
+        throw error
       }
-      
-      throw error
     }
   }
 

@@ -131,6 +131,7 @@ interface IOrderTrade {
   quantity: number
   commission: number
   isMaker: boolean
+  eventTime: number
 }
 
 export type { BinancePrivateWebsocketType } from './websocket'

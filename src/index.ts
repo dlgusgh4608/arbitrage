@@ -8,7 +8,7 @@ import { EventBroker } from '@modules/event-broker'
 
 import { Collector } from './apps/collector'
 import { Archive } from './apps/archive'
-// import { Order } from './apps/order'
+import { Order } from './apps/order'
 
 const EXCHANGE_RATE_INTERVAL_TIME_TO_SEC = 10
 
@@ -17,18 +17,19 @@ async function main() {
     await initializeDatabase()
     
     const symbols = await Symbol.Exec.find()
-    // const usersWithEnv = await User.Exec.findWithEnv()
-
-
+    const usersWithEnv = await User.Exec.findWithEnv()
 
     const usdToKrw = new UsdToKrw(EXCHANGE_RATE_INTERVAL_TIME_TO_SEC)
     const coreEmitter = new EventBroker()
 
     coreEmitter.subscribe(usdToKrw)
 
-    // usersWithEnv.forEach(userWithEnv => {
-    //   const order = new Order(coreEmitter, userWithEnv)
-    // })
+    usersWithEnv.forEach(userWithEnv => {
+      console.log(userWithEnv)
+      
+      const order = new Order(coreEmitter, userWithEnv)
+      order.run()
+    })
     
     const collector = new Collector(coreEmitter, symbols)
     const archive = new Archive(coreEmitter, symbols)

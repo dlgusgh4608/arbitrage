@@ -10,11 +10,41 @@ interface OrderSchema {
   created_at: Date
 }
 
+interface ICreateOrderPayload {
+  symbol_id: number
+  user_id: number
+}
+
 class Order extends ModelObject implements IModelObject {
   constructor() { super() }
 
-  Query = {}
-  Exec = {}
+  Query = {
+    create: (payload: ICreateOrderPayload) => {
+      const { keysStr, values, valuesStr } = this.generateInsertValues([payload])
+      
+      const query = 
+      `
+      INSERT INTO orders (${keysStr})
+      VALUES ${valuesStr}
+      RETURNING id;
+      `
+
+      return { query, queryValues: values }
+    }
+  }
+  Exec = {
+    create: async (payload: ICreateOrderPayload): Promise<{ id: number }> => {
+      try {
+        const { query, queryValues } = this.Query.create(payload)
+
+        const returningIds = await pool.query<{ id: number }>(query, queryValues)
+
+        return returningIds.rows[0]
+      } catch (error) {
+        throw error
+      }
+    }
+  }
 }
 
 export type { OrderSchema }

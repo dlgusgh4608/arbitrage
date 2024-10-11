@@ -35,7 +35,7 @@ export class BinancePrivateWebsocket extends BinancePrivateWebsocketHandler {
     onOpen: () => void
     onError: (error: Error) => void
     onClose: () => void
-    onMessage: (data: string) => void
+    onMessage: (data: IOriginAccountUpdate | IOriginOrderTradeUpdate | IOriginListenKeyExpired) => void
   } = {
     onOpen: () => {
       console.log(`binance private websocket connected: "${this.socketUrl}"`)
@@ -62,8 +62,8 @@ export class BinancePrivateWebsocket extends BinancePrivateWebsocketHandler {
         }, RECONNECT_TIMEOUT)
       }
     },
-    onMessage: (strData: string) => {
-      const data: IOriginAccountUpdate | IOriginOrderTradeUpdate | IOriginListenKeyExpired = JSON.parse(strData)
+    onMessage: (data: IOriginAccountUpdate | IOriginOrderTradeUpdate | IOriginListenKeyExpired) => {
+      // const data: IOriginAccountUpdate | IOriginOrderTradeUpdate | IOriginListenKeyExpired = strData
 
       const eventType = data.e
 

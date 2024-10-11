@@ -59,6 +59,7 @@ export class BinancePrivateWebsocketHandler extends EventEmitter {
 
   protected switchOrderTrade(data: IOriginOrderTradeUpdate) {
     const order = data.o
+    const eventTime = data.E
     const orderId = order.c
     const orderStatus = order.X
     const side = order.S
@@ -75,6 +76,7 @@ export class BinancePrivateWebsocketHandler extends EventEmitter {
       quantity: Number(quantity),
       commission: Number(commission),
       isMaker,
+      eventTime
     }
 
 
@@ -138,6 +140,7 @@ export class BinancePrivateWebsocketHandler extends EventEmitter {
       quantity: round8(sumOrder.quantity), // 합계
       commission: round8(sumOrder.commission), // 합계
       isMaker: firstOrder.isMaker,
+      eventTime: firstOrder.eventTime
     }
 
     return payload
