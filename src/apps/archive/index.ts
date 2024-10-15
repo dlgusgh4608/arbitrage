@@ -15,6 +15,7 @@ const TIME_DIFFERENCE_LIMIT_SEC = 60
 class RedisService {
   private symbols: SymbolWithExchange[] = []
   private client = redisClient
+
   constructor(symbols: SymbolWithExchange[]) {
     this.symbols = symbols
   }
@@ -25,8 +26,7 @@ class RedisService {
       const now = dayjs().toDate()
 
       for (const symbol of this.symbols) {
-        const { name, domestic, overseas } = symbol
-        const key = [name, domestic, overseas].join('-')
+        const key = [String(symbol.id), 'trade'].join('-')
         
         const premium = data[key]
         if(!premium) continue
@@ -54,8 +54,7 @@ class RedisService {
       const payload: { [key: string]: T[] } = {}
       
       for (const symbol of this.symbols) {
-        const { name, domestic, overseas } = symbol
-        const key = [name, domestic, overseas].join('-')
+        const key = [String(symbol.id), 'trade'].join('-')
         const response = await this.client.list(key).popMultiple<T>(count)
 
         if(response.length > 0) payload[key] = response
@@ -70,8 +69,7 @@ class RedisService {
   async clearList(): Promise<void> {
     try {
       for (const symbol of this.symbols) {
-        const { name, domestic, overseas } = symbol
-        const key = [name, domestic, overseas].join('-')
+        const key = [String(symbol.id), 'trade'].join('-')
         await this.client.list(key).delete()
         console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]\tRedis List Clear\t${key}`)
       }
@@ -96,18 +94,12 @@ export class Archive {
   private onSymbolTrade = (): void => {
     for(const symbol of this.symbols) {
       try {
-        const { name, domestic, overseas } = symbol
-        const key = [name, domestic, overseas].join('-')
-        const customerKey = [key, 'trade'].join('-')
-        this.emitter.on(customerKey, (data: Premium) => { this.data[key] = data })
+        const key = [String(symbol.id), 'trade'].join('-')
+        this.emitter.on(key, (data: Premium) => { this.data[key] = data })
       } catch (error) {
         throw error
       }
     }
-  }
-
-  private clearData = (): void => {
-    this.data = {}
   }
   
   private pushRedisServiceOnSec = (): void => {
@@ -115,7 +107,6 @@ export class Archive {
       scheduleJob(SECOND_CRON, async () => {
         try {
           await this.redisService!.push(this.data)
-          this.clearData()
         } catch (error) {
           throw error
         }
@@ -132,15 +123,14 @@ export class Archive {
           const response = await this.redisService!.popMultiple<PremiumRedisBufferData>(60)
   
           for (const symbol of this.symbols) {
-            const { id, name, domestic, overseas } = symbol
-            const key = [name, domestic, overseas].join('-')
+            const key = [String(symbol.id), 'trade'].join('-')
             const premium = response?.[key]
   
             if(!premium) continue
 
             const payload = premium.map(
               ({ domestic, usdToKrw, overseas, premium, createdAt, domesticTradeAt, overseasTradeAt }): SymbolPriceSchema => ({
-                symbol_id: id,
+                symbol_id: symbol.id,
                 created_at: dayjs(createdAt).toDate(),
                 premium: premium,
                 domestic: domestic,

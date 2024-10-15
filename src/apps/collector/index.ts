@@ -41,8 +41,8 @@ export class Collector {
     if(this.usdToKrw < 1000) return
     
     for(const symbol of this.symbols) {
-      const { name, domestic, overseas } = symbol
-      const key = [name, domestic, overseas, 'trade'].join('-')
+      const { id, name } = symbol
+      const key = [String(id), 'trade'].join('-')
       const upbitData = this.upbit.get('trade', name) as UpbitTrade
       const binanceData = this.binance.get('trade', name) as BinanceTrade
 
@@ -52,8 +52,7 @@ export class Collector {
       const binanceLastTradeTime = dayjs(binanceData.tradeTime).toDate()
 
       if(Math.abs(getTimeDifference(upbitLastTradeTime, binanceLastTradeTime)) > TIME_DIFFERENCE_LIMIT_SEC) {
-        console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]:${key}\tTime difference between upbit and binance is more than ${TIME_DIFFERENCE_LIMIT_SEC} seconds`)
-        this.emitter.emit('error', `time difference between upbit and binance is more than ${TIME_DIFFERENCE_LIMIT_SEC} seconds`)
+        console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]:${name}\tTime difference between upbit and binance is more than ${TIME_DIFFERENCE_LIMIT_SEC} seconds`)
         
         continue
       }
@@ -84,12 +83,12 @@ export class Collector {
     if(!this.binance) return
 
     for(const symbol of this.symbols) {
-      const { name, domestic, overseas } = symbol
+      const { id, name } = symbol
       const upbitData = this.upbit.get('orderbook', name) as UpbitOrderbook
       const binanceData = this.binance.get('orderbook', name) as BinanceOrderbook
       
       this.emitter.emit(
-        [symbol, domestic, overseas, 'orderbook'].join('-'),
+        [String(id), 'orderbook'].join('-'),
         {
           upbit: upbitData,
           binance: binanceData,
@@ -116,8 +115,6 @@ export class Collector {
       // 각 class 실행
       upbit.run()
       binance.run()
-
-      // 각 class 저장
       this.upbit = upbit
       this.binance = binance
 

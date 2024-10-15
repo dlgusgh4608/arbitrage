@@ -60,7 +60,7 @@ export class BinancePrivateWebsocketHandler extends EventEmitter {
   protected switchOrderTrade(data: IOriginOrderTradeUpdate) {
     const order = data.o
     const eventTime = data.E
-    const orderId = order.c
+    const orderClientId = order.c
     const orderStatus = order.X
     const side = order.S
     const symbol = order.s
@@ -70,6 +70,7 @@ export class BinancePrivateWebsocketHandler extends EventEmitter {
     const commission = order.n
 
     const orderTradePayload: IOrderTrade = {
+      orderClientId: orderClientId,
       symbol: symbol.replace('USDT', '').toLowerCase(),
       side,
       price: Number(price),
@@ -86,11 +87,11 @@ export class BinancePrivateWebsocketHandler extends EventEmitter {
       //   break
       // }
       case 'PARTIALLY_FILLED': { // 부분 체결.
-        this.partiallyFilledOrderTrade(orderId, orderTradePayload)
+        this.partiallyFilledOrderTrade(orderClientId, orderTradePayload)
         break
       } 
       case 'FILLED': { // 체결 완료.
-        this.filledOrderTrade(orderId, orderTradePayload)
+        this.filledOrderTrade(orderClientId, orderTradePayload)
         break
       }
     }
@@ -134,6 +135,7 @@ export class BinancePrivateWebsocketHandler extends EventEmitter {
     }), { quantity: 0, price: 0, commission: 0 })
 
     const payload: IOrderTrade = {
+      orderClientId: firstOrder.orderClientId,
       symbol: firstOrder.symbol,
       side: firstOrder.side,
       price: round8(sumOrder.price / orderLength), // 평균
