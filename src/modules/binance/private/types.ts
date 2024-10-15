@@ -134,6 +134,7 @@ interface IOrderTrade {
   eventTime: number
 }
 
+export type * from './rest/account'
 export type { BinancePrivateWebsocketType } from './websocket'
 export type { BinancePrivateType } from '.'
 export type {

@@ -84,7 +84,9 @@ export class Order extends Auth {
       const query = this.createValidator(type, symbol, side, timeInForce, quantity, price)
       const now = Date.now()
       
-      const { apiKey, signature } = this.generateToken({ ...query, timestamp: now })
+      const { apiKey, signature } = this.generateToken({ ...query, timestamp: now,
+        // newClientOrderId: '2'
+      })
 
       const payload = {
         method: 'POST',

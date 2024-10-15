@@ -4,6 +4,7 @@ import { createHash } from 'crypto'
 import { stringify } from 'querystring'
 
 import { Order } from './rest/order'
+import { Wallet } from './rest/wallet'
 
 import type { ITokens, IAuth } from './types'
 
@@ -43,6 +44,10 @@ export class UpbitPrivate {
 
   order() {
     return new Order(this.generateTokenOfCurry({ accessKey: this.accessKey, secretKey: this.secretKey }))
+  }
+
+  wallet() {
+    return new Wallet(this.generateTokenOfCurry({ accessKey: this.accessKey, secretKey: this.secretKey }))
   }
 }
 
