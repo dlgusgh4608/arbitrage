@@ -19,7 +19,7 @@ export interface AccountBalance {
 }
 
 
-export class Account extends Auth {
+export class BinanceAccount extends Auth {
   constructor(genTokenFunc: (body: { [key: string]: any }) => IAuth) {
     super(genTokenFunc)
   }
@@ -45,3 +45,5 @@ export class Account extends Auth {
     }
   }
 }
+
+export type BinanceAccountType = InstanceType<typeof BinanceAccount>

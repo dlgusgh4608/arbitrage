@@ -1,5 +1,7 @@
 import axios from 'axios'
 import { Auth } from './auth'
+import { isBinanceClientOrderId } from '@utils/regex'
+
 import type { IAuth } from '../types'
 
 type TType = 'LIMIT' | 'MARKET'
@@ -7,6 +9,7 @@ type TSide = 'BUY' | 'SELL'
 type TTimeInForce = 'IOC' | 'GTC' | 'GTD'
 
 interface IOrderPayload {
+  newClientOrderId: string
   type: TType
   symbol: string
   side: TSide
@@ -15,7 +18,7 @@ interface IOrderPayload {
   timeInForce: TTimeInForce
 }
 
-interface IOrder {
+interface IOrderResponse {
   clientOrderId: string;
   cumQty: string; // Cumulative quantity, stored as a string
   cumQuote: string; // Cumulative quote, stored as a string
@@ -46,12 +49,13 @@ interface IOrder {
 
 const ORDER_URL = 'https://fapi.binance.com/fapi/v1/order'
 
-export class Order extends Auth {
+export class BinanceOrder extends Auth {
   constructor(genTokenFunc: (body: { [key: string]: any }) => IAuth) {
     super(genTokenFunc)
   }
 
   private createValidator(
+    newClientOrderId: string,
     type: TType,
     symbol: string,
     side: TSide,
@@ -59,6 +63,8 @@ export class Order extends Auth {
     quantity?: number,
     price?: number,
   ): IOrderPayload {
+    if(!newClientOrderId) throw new Error('newClientOrderId is required')
+    if(!newClientOrderId.match(isBinanceClientOrderId)) throw new Error(`newClientOrderId does not fit regexp format.\t ${isBinanceClientOrderId}`)
     if(!symbol) throw new Error('Symbol is required')
     if(side !== 'BUY' && side !== 'SELL') throw new Error('Side is BUY or SELL')
     if(!type) throw new Error('Type is LIMIT or MARKET')
@@ -66,27 +72,26 @@ export class Order extends Auth {
 
     if(type === 'LIMIT') {
       if(!price) throw new Error('If LIMIT type price required.')
-      return { symbol, side, type, quantity, price, timeInForce }
+      return { newClientOrderId, symbol, side, type, quantity, price, timeInForce }
     }else { 
-      return { symbol, side, type, quantity, timeInForce } // MARKET
+      return { newClientOrderId, symbol, side, type, quantity, timeInForce } // MARKET
     }
   }
   
   async create(
+    newClientOrderId: string,
     type: TType,
     symbol: string,
     side: TSide,
     quantity?: number,
     price?: number,
     timeInForce: TTimeInForce = 'GTC'
-  ): Promise<IOrder> {
+  ): Promise<IOrderResponse> {
     try {
-      const query = this.createValidator(type, symbol, side, timeInForce, quantity, price)
+      const query = this.createValidator(newClientOrderId, type, symbol, side, timeInForce, quantity, price)
       const now = Date.now()
       
-      const { apiKey, signature } = this.generateToken({ ...query, timestamp: now,
-        // newClientOrderId: '2'
-      })
+      const { apiKey, signature } = this.generateToken({ ...query, timestamp: now })
 
       const payload = {
         method: 'POST',
@@ -97,7 +102,7 @@ export class Order extends Auth {
         params: signature
       }
 
-      const { data } = await axios<IOrder>(payload)
+      const { data } = await axios<IOrderResponse>(payload)
 
       return data
     } catch (error) {
@@ -105,14 +110,13 @@ export class Order extends Auth {
     }
   }
 
-  async cancel(symbol: string, orderId: number): Promise<IOrder> {
+  async cancel(symbol: string, origClientOrderId: string): Promise<IOrderResponse> {
     try {
       if(!symbol) throw new Error('Symbol is required')
-      if(!orderId) throw new Error('OrderId is required')
+      if(!origClientOrderId) throw new Error('OrderId is required')
+      if(!origClientOrderId.match(isBinanceClientOrderId)) throw new Error(`origClientOrderId does not fit regexp format.\t ${isBinanceClientOrderId}`)
 
-      const now = new Date()
-
-      const { apiKey, signature } = this.generateToken({ symbol, orderId, timestamp: now })
+      const { apiKey, signature } = this.generateToken({ symbol, origClientOrderId, timestamp: Date.now() })
 
       const payload = {
         method: 'DELETE',
@@ -123,7 +127,7 @@ export class Order extends Auth {
         params: signature
       }
 
-      const { data } = await axios<IOrder>(payload)
+      const { data } = await axios<IOrderResponse>(payload)
 
       return data
     } catch (error) {
@@ -131,4 +135,32 @@ export class Order extends Auth {
     }
   }
 
+  async get(symbol: string, origClientOrderId: string): Promise<IOrderResponse> {
+    try {
+      if(!symbol) throw new Error('Symbol is required')
+      if(!origClientOrderId) throw new Error('OrderId is required')
+      if(!origClientOrderId.match(isBinanceClientOrderId)) throw new Error(`origClientOrderId does not fit regexp format.\t ${isBinanceClientOrderId}`)
+
+      const { apiKey, signature } = this.generateToken({ symbol, origClientOrderId, timestamp: Date.now() })
+
+      const payload = {
+        method: 'GET',
+        url: ORDER_URL,
+        headers: {
+          'X-MBX-APIKEY': apiKey
+        },
+        params: signature,
+        
+      }
+
+      const { data } = await axios<IOrderResponse>(payload)
+
+      return data
+    } catch (error) {
+      throw error
+    }
+  }
 }
+
+export type { IOrderResponse }
+export type BinanceOrderType = InstanceType<typeof BinanceOrder>

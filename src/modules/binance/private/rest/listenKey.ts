@@ -8,7 +8,7 @@ interface IListenKeyResponse {
   listenKey: string
 }
 
-export class ListenKey extends Auth {
+export class BinanceListenKey extends Auth {
   constructor(genTokenFunc: (body: { [key: string]: any }) => IAuth) {
     super(genTokenFunc)
   }
@@ -55,3 +55,5 @@ export class ListenKey extends Auth {
     }
   }
 }
+
+export type BinanceListenKeyType = InstanceType<typeof BinanceListenKey>
