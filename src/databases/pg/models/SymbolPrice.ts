@@ -80,45 +80,84 @@ class SymbolPrice extends ModelObject implements IModelObject {
     // },
     findPremiumBySymbolIdInMinute: function(symbol_id: number, minute: number = 360) { // default 6hour
       const limit = minute * 60
-
+      
+      // SELECT
+      //   CAST(avg_usd_to_krw AS float) AS avg_usd_to_krw,
+      //   CAST(
+      //     ROUND(
+      //       MIN(
+      //         (domestic / ROUND(overseas * avg_usd_to_krw) - 1) * 100
+      //       )::numeric,
+      //       2
+      //     ) AS float
+      //   ) AS min_premium
+      //   ,
+      //   CAST(
+      //     ROUND(
+      //       MAX(
+      //         (domestic / ROUND(overseas * avg_usd_to_krw) - 1) * 100
+      //       )::numeric,
+      //       2
+      //     ) AS float
+      //   ) AS max_premium
+      // FROM (
+      //     SELECT
+      //         ROUND(
+      //           AVG(usd_to_krw)::numeric,
+      //           4
+      //         ) AS avg_usd_to_krw,
+      //         domestic,
+      //         overseas
+      //     FROM
+      //         symbol_prices
+      //     WHERE
+      //         symbol_id = $1
+      //     GROUP BY domestic, overseas
+      //     LIMIT $2
+      // ) AS sub_query
+      // GROUP BY
+      //   avg_usd_to_krw;
+      
+      
+      
+      
+      
       const query =
       `
-      SELECT
-        CAST(avg_usd_to_krw AS float) AS avg_usd_to_krw,
+      WITH avg_values AS (
+        SELECT 
+          AVG(usd_to_krw) AS avg_usd_to_krw,
+          domestic,
+          overseas
+        FROM 
+          symbol_prices
+        WHERE 
+          symbol_id = $1
+        GROUP BY 
+          domestic, overseas
+        LIMIT $2
+      )
+      SELECT 
         CAST(
           ROUND(
-            MIN(
-              (domestic / ROUND(overseas * avg_usd_to_krw) - 1) * 100
-            )::numeric,
-            2
+            AVG(avg_usd_to_krw)::numeric,
+            4
+          ) AS float
+        ) AS avg_usd_to_krw,
+        CAST(
+          ROUND(
+            MAX((domestic / ROUND(overseas * avg_usd_to_krw) - 1) * 100)::numeric,
+            4
+          ) AS float
+        ) AS max_premium,
+        CAST(
+          ROUND(
+            MIN((domestic / ROUND(overseas * avg_usd_to_krw) - 1) * 100)::numeric,
+            4
           ) AS float
         ) AS min_premium
-        ,
-        CAST(
-          ROUND(
-            MAX(
-              (domestic / ROUND(overseas * avg_usd_to_krw) - 1) * 100
-            )::numeric,
-            2
-          ) AS float
-        ) AS max_premium
-      FROM (
-          SELECT
-              ROUND(
-                AVG(usd_to_krw)::numeric,
-                4
-              ) AS avg_usd_to_krw,
-              domestic,
-              overseas
-          FROM
-              symbol_prices
-          WHERE
-              symbol_id = $1
-          GROUP BY domestic, overseas
-          LIMIT $2
-      ) AS sub_query
-      GROUP BY
-        avg_usd_to_krw;
+      FROM 
+        avg_values;
       `
 
       return { query, queryValues: [symbol_id, limit] }
