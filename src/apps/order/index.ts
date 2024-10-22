@@ -44,7 +44,7 @@ class OrderClass {
     this.domesticPrivate = new UpbitPrivate({ accessKey: userEnv.domestic_access_key, secretKey: userEnv.domestic_secret_key })
     this.overseasPrivate = new BinancePrivate({ accessKey: userEnv.overseas_access_key, secretKey: userEnv.overseas_secret_key })
     this.wallet = new WalletController(this.domesticPrivate, this.overseasPrivate)
-    this.automatic = new Automatic(this.userInfo.symbol_id, this.openOrders, this.emitterOut, this.overseasPrivate)
+    this.automatic = new Automatic(this.userInfo.symbol_id, this.userInfo.user_id, this.openOrders, this.emitterOut, this.overseasPrivate)
 
     this.emitterOut.on(USD_TO_KRW, this.setUsdToKrw)
   }

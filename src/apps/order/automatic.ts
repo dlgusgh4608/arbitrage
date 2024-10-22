@@ -15,19 +15,29 @@ const AVG_DOWN = -0.5
 const ORDER_STAIRS = 2
 const SAFETY_WALLET_PERCENT = 0.98
 const LEVERAGE = 5 // 추후에 Event받아와 업데이트 해줘야함.
+const LOGGER_INTERVAL = 1000 * 60 * 3
 
 export class Automatic extends Abstract {
   private mvPriceStack: number[] = []
   private prevOverseasPrice: number = 0
   private overseasPrice: number = 0
+
+
+  private premiumOfStandardUsdToKrw = 0
+  private knee = 0
+  private shoulder = 0
+  private avg_usd_to_krw = 0
   
   constructor(
     symbolId: number,
+    userId: number,
     openOrders: IBuyOpenOrderResponse[],
     emitter: EventBrokerType,
     overseasPrivate: BinancePrivateType
   ) {
-    super(symbolId, openOrders, emitter, overseasPrivate)
+    super(symbolId, userId, openOrders, emitter, overseasPrivate)
+
+    setInterval(() => this.logger(), LOGGER_INTERVAL)
   }
 
   private clearVariables = (): void => {
@@ -36,6 +46,27 @@ export class Automatic extends Abstract {
     this.overseasPrice = 0
   }
 
+  private logger = () => {
+    const log = [
+      `${dayjs().format('YYYY-MM-DD HH:mm:ss')}: [ Automatic Information ]`,
+      `premiumOfStandard:\t${this.premiumOfStandardUsdToKrw}`,
+      `knee:\t${this.knee}`,
+      `shoulder:\t${this.shoulder}`,
+      `avg_usd_to_krw:\t${this.avg_usd_to_krw}`,
+      `user_id:\t${this.userId}`,
+      `trading_position_length:\t${this.openOrders.length}`,
+    ]
+
+    this.openOrders.forEach((openOrder, index) => {
+      const premiumByOrder = getPremium(krwToUsd(openOrder.domestic_price, this.avg_usd_to_krw), openOrder.overseas_price)
+      const profit_rate = this.premiumOfStandardUsdToKrw - premiumByOrder
+
+      log.push(`[open_order_profit_rate:${index}]:\t${profit_rate}`)
+    })
+    
+    console.log(log.join(`\n`))
+  }
+  
   protected trade = async (response: Premium): Promise<void> => {
     try {
       if(this.lock) return console.log('lock!')// lock시 return
@@ -55,9 +86,14 @@ export class Automatic extends Abstract {
 
       const { avg_usd_to_krw, max_premium, min_premium } = this.standardPremium
 
+      
       const premiumOfStandardUsdToKrw = getPremium(krwToUsd(domestic, avg_usd_to_krw), overseas)
       const knee = getKneeValue(max_premium, min_premium)
       const shoulder = getShoulderValue(max_premium, min_premium)
+      this.avg_usd_to_krw = avg_usd_to_krw
+      this.knee = knee
+      this.shoulder = shoulder
+      this.premiumOfStandardUsdToKrw = premiumOfStandardUsdToKrw
       const profitRate = shoulder - knee < MINIMUM_PROFIT_RATE ? MINIMUM_PROFIT_RATE : shoulder - knee
       
       const average = this.mvPriceStack.reduce((a, c) => a + c, 0) / this.mvPriceStack.length
@@ -75,7 +111,6 @@ export class Automatic extends Abstract {
 
         if(targetOrder) { // 수익률 조건이 채워짐 --- 매도 거래 진행
           this.setLock()
-          
 
           const soldOverseasQuantity = targetOrder.sold_overseas_quantity || 0
           const targetPrice = floor2(overseas - moveValue)
@@ -182,6 +217,7 @@ export class Automatic extends Abstract {
       throw error
     }
   }
+
 }
 
 export type AutomaticType = InstanceType<typeof Automatic>

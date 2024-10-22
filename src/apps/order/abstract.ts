@@ -20,6 +20,7 @@ export abstract class Abstract {
   private readonly key: string
   private readonly symbolId: number
   
+  protected readonly userId: number
   protected walletLock: boolean = false
   protected lock: boolean = false
   protected cleanPositionWallet: IWallets = { domestic: 0, overseas: 0 }
@@ -33,11 +34,13 @@ export abstract class Abstract {
   
   constructor(
     symbolId: number,
+    userId: number,
     openOrders: IBuyOpenOrderResponse[],
     emitter: EventBrokerType,
     overseasPrivate: BinancePrivateType
   ) {
     this.symbolId = symbolId
+    this.userId = userId
     this.key = [String(symbolId), 'trade'].join('-')
     this.openOrders = openOrders
     this.emitter = emitter
