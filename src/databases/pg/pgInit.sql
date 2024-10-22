@@ -62,13 +62,13 @@ CREATE TABLE IF NOT EXISTS user_envs (
     user_id INTEGER REFERENCES users(id),
     exchange_id INTEGER REFERENCES exchanges(id),
     domestic_access_key VARCHAR(255) NOT NULL,
-    domestic_access_iv VARCHAR(32) NOT NULL,
+    domestic_access_iv CHAR(32) NOT NULL,
     domestic_secret_key VARCHAR(255) NOT NULL,
-    domestic_secret_iv VARCHAR(32) NOT NULL,
+    domestic_secret_iv CHAR(32) NOT NULL,
     overseas_access_key VARCHAR(255) NOT NULL,
-    overseas_access_iv VARCHAR(32) NOT NULL,
+    overseas_access_iv CHAR(32) NOT NULL,
     overseas_secret_key VARCHAR(255) NOT NULL,
-    overseas_secret_iv VARCHAR(32) NOT NULL,
+    overseas_secret_iv CHAR(32) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -100,19 +100,10 @@ CREATE TABLE IF NOT EXISTS symbol_prices (
 );
 
 -- 주문에 관련된 Table 생성
-CREATE TABLE IF NOT EXISTS orders (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS buy_orders (
+    id UUID PRIMARY KEY,
     symbol_id INTEGER REFERENCES symbols(id),
     user_id INTEGER REFERENCES users(id),
-    is_close BOOLEAN DEFAULT FALSE,
-    net_profit_rate FLOAT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS order_details (
-    id SERIAL PRIMARY KEY,
-    order_id INTEGER REFERENCES orders(id),
-    status VARCHAR(4) CHECK (status IN ('buy', 'sell')),
     premium FLOAT NOT NULL,
     domestic_price INTEGER NOT NULL,
     domestic_quantity FLOAT NOT NULL,
@@ -124,6 +115,26 @@ CREATE TABLE IF NOT EXISTS order_details (
     is_maker BOOLEAN DEFAULT FALSE,
     domestic_trade_at TIMESTAMP NOT NULL,
     overseas_trade_at TIMESTAMP NOT NULL,
+    is_close BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sell_orders (
+    id SERIAL PRIMARY KEY,
+    buy_order_id UUID REFERENCES buy_orders(id),
+    premium FLOAT NOT NULL,
+    domestic_price INTEGER NOT NULL,
+    domestic_quantity FLOAT NOT NULL,
+    domestic_commission FLOAT NOT NULL,
+    overseas_price FLOAT NOT NULL,
+    overseas_quantity FLOAT NOT NULL,
+    overseas_commission FLOAT NOT NULL,
+    usd_to_krw FLOAT NOT NULL,
+    is_maker BOOLEAN DEFAULT FALSE,
+    domestic_trade_at TIMESTAMP NOT NULL,
+    overseas_trade_at TIMESTAMP NOT NULL,
+    profit_rate FLOAT NOT NULL,
+    net_profit_rate FLOAT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

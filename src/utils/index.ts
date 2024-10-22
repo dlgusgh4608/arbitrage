@@ -36,3 +36,9 @@ export function wait(ms: number) {
 export function removeUndefinedInObject(obj: { [key: string]: any }) {
   return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined))
 }
+
+export const getKneeValue = (max: number, min: number) => round4(min + (max - min) * 0.25)
+export const getShoulderValue = (max: number, min: number) => round4(max - (max - min) * 0.25)
+
+export const getPercent = (total: number, part: number) => round4(total / part * 100)
+export const calcPercentOf = (amount: number, percent: number, round: number = 0) => roundTo(round)((percent / 100) * amount)

@@ -39,13 +39,13 @@ interface IUserEnv {
 }
 
 interface IOriginUserTradeWithEnv {
-  id: number
+  user_id: number
   symbol_id: number
   user_env: IOriginUserEnv
 }
 
 export interface IUserTradeWithEnv {
-  id: number
+  user_id: number
   symbol_id: number
   user_env: IUserEnv
 }
@@ -114,16 +114,15 @@ class User extends ModelObject implements IModelObject {
           users AS u
         INNER JOIN
           user_statuses AS us ON u.id = us.user_id
-        LEFT JOIN
+        INNER JOIN
           user_envs as ue ON us.trade_user_env_id = ue.id
         WHERE
           us.trading = true
           AND
-          u.id = 
-          (
+          u.id IN (
             SELECT id
             FROM user_roles
-            WHERE role != 'normal' LIMIT 1
+            WHERE role != 'normal'
           )
         ;
       `

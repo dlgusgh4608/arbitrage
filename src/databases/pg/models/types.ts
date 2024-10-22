@@ -1,6 +1,6 @@
 export type * from './Exchange'
-export type * from './Order'
-export type * from './OrderDetail'
+export type * from './BuyOrder'
+export type * from './SellOrder'
 export type * from './Symbol'
 export type * from './SymbolPrice'
 export type * from './User'

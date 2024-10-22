@@ -1,6 +1,6 @@
 export { default as Exchange } from './Exchange'
-export { default as Order } from './Order'
-export { default as OrderDetail } from './OrderDetail'
+export { default as BuyOrder } from './BuyOrder'
+export { default as SellOrder } from './SellOrder'
 export { default as Symbol } from './Symbol'
 export { default as SymbolPrice } from './SymbolPrice'
 export { default as User } from './User'

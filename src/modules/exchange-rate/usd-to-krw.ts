@@ -49,7 +49,7 @@ export class UsdToKrw {
         
         const exchangeRate = await this.getUsdToKrw()
 
-        if(!exchangeRate && this.exchangeRate !== exchangeRate) {
+        if(exchangeRate !== 0 && this.exchangeRate !== exchangeRate) {
           console.log(`[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')} ]\tUpdate UsdToKrw ${this.exchangeRate} -> ${exchangeRate}`)
           this.exchangeRate = exchangeRate
           this.emitterOut.emit(USD_TO_KRW, this.exchangeRate)

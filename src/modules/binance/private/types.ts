@@ -136,6 +136,8 @@ interface IOrderTrade {
 }
 
 export type * from './rest/account'
+export type * from './rest/listenKey'
+export type * from './rest/order'
 export type { BinancePrivateWebsocketType } from './websocket'
 export type { BinancePrivateType } from '.'
 export type {

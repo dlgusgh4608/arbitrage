@@ -14,7 +14,7 @@ import type { BinancePublicWebsocketType, BinanceTrade, BinanceOrderbook } from 
 import type { Premium, Orderbook } from './types'
 
 const TIME_DIFFERENCE_LIMIT_SEC = 60
-const PREMIUM_INTERVAL_TIME_TO_SEC = 100
+const PREMIUM_INTERVAL_TIME_TO_SEC = 500
 const UPBIT_UNIQUE_SYMBOL = 'ConnectUpbitSocketForCollector'
 
 export class Collector {

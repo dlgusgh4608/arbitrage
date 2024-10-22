@@ -106,6 +106,7 @@ export class BinanceOrder extends Auth {
 
       return data
     } catch (error) {
+      console.log(error)
       throw error
     }
   }

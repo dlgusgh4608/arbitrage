@@ -3,8 +3,8 @@ import type { UpbitPrivateType, IWallet } from '@modules/upbit/private/types'
 import type { BinancePrivateType, AccountBalance } from '@modules/binance/private/types'
 
 export interface IWallets {
-  domestic?: IWallet,
-  overseas?: AccountBalance
+  domestic: number,
+  overseas: number
 }
 
 export class WalletController {
@@ -13,7 +13,7 @@ export class WalletController {
   private binancePrivate: BinancePrivateType
   private upbitPrivate: UpbitPrivateType
 
-  private wallets: IWallets = { domestic: undefined, overseas: undefined }
+  private wallets: IWallets = { domestic: 0, overseas: 0 }
   
   constructor(upbitPrivate: UpbitPrivateType, binancePrivate: BinancePrivateType) {
     this.upbitPrivate = upbitPrivate
@@ -24,7 +24,7 @@ export class WalletController {
     try {
       const wallet = await this.binancePrivate.account().getWallet()
       const usdt = wallet.find(resource => resource.asset === 'USDT')
-      this.wallets.overseas = usdt
+      this.wallets.overseas = Number(usdt!.availableBalance)
     } catch (error) {
       throw error
     }
@@ -34,7 +34,7 @@ export class WalletController {
     try {
       const wallet = await this.upbitPrivate.wallet().get()
       const krw = wallet.find(resource => resource.currency === 'KRW')
-      this.wallets.domestic = krw
+      this.wallets.domestic = Number(krw!.balance)
     } catch (error) {
       throw error
     }

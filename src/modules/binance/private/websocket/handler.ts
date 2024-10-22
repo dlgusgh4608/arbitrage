@@ -2,6 +2,7 @@ import EventEmitter from 'events'
 import dayjs from 'dayjs'
 
 import { round8 } from '@utils'
+import { validate as uuidValidate } from 'uuid'
 
 import { BINANCE_BUY, BINANCE_FUNDING_FEE, BINANCE_LISTEN_KEY_EXPIRED, BINANCE_SELL } from '@utils/constants'
 
@@ -80,10 +81,16 @@ export class BinancePrivateWebsocketHandler extends EventEmitter {
       eventTime
     }
 
+    if(!uuidValidate(orderClientId)) {
+      console.log(`[ ${orderStatus} ]\tI guess this order from not automatic`)
+      return
+    }
+
 
     switch(orderStatus) {
       // case 'NEW': { // 새로운 주문.
-      //   this.newOrderTrade(data)
+      //   console.log(data)
+      //   // this.newOrderTrade(data)
       //   break
       // }
       case 'PARTIALLY_FILLED': { // 부분 체결.

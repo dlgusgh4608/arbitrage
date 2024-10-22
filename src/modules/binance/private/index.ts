@@ -1,9 +1,9 @@
 import { createHmac } from 'crypto'
 import { stringify } from 'querystring'
 
-import { Account } from './rest/account'
-import { ListenKey } from './rest/listenKey'
-import { Order } from './rest/order'
+import { BinanceAccount } from './rest/account'
+import { BinanceListenKey } from './rest/listenKey'
+import { BinanceOrder } from './rest/order'
 import { BinancePrivateWebsocket } from './websocket'
 import type { ITokens, IAuth } from './types'
 
@@ -32,15 +32,15 @@ export class BinancePrivate {
   }
 
   account() {
-    return new Account(this.generateTokenOfCurry(this.accessKey, this.secretKey))
+    return new BinanceAccount(this.generateTokenOfCurry(this.accessKey, this.secretKey))
   }
 
   listenKey() {
-    return new ListenKey(this.generateTokenOfCurry(this.accessKey, this.secretKey))
+    return new BinanceListenKey(this.generateTokenOfCurry(this.accessKey, this.secretKey))
   }
 
   order() {
-    return new Order(this.generateTokenOfCurry(this.accessKey, this.secretKey))
+    return new BinanceOrder(this.generateTokenOfCurry(this.accessKey, this.secretKey))
   }
 
   webSocket(reconnect: boolean = true) {
