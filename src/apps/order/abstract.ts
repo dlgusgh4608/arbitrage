@@ -76,7 +76,7 @@ export abstract class Abstract {
 
   private runStandardPremiumInterval(intervalInMinute: number) {
     const interval = intervalInMinute * 60 * 1000
-    setInterval(() => this.setPremiumBySymbolPriceInMinute, interval)
+    setInterval(() => this.setPremiumBySymbolPriceInMinute(), interval)
   }
   
   private handleOrder(usdtSymbol: string, origClientOrderId: string) {
