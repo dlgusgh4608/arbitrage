@@ -77,5 +77,5 @@ class SellOrder extends ModelObject implements IModelObject {
   }
 }
 
-export type { SellOrderSchema }
+export type { SellOrderSchema, ISellOrderCreatePayload }
 export default new SellOrder()

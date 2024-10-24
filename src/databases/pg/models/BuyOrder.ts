@@ -181,5 +181,5 @@ class BuyOrder extends ModelObject implements IModelObject {
   }
 }
 
-export type { BuyOrderSchema, IBuyOrderResponse, IBuyOpenOrderResponse }
+export type { BuyOrderSchema, IBuyOrderResponse, IBuyOpenOrderResponse, IBuyOrderCreatePayload }
 export default new BuyOrder()

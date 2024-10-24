@@ -34,6 +34,7 @@ async function main() {
     const collector = new Collector(coreEmitter, symbols)
     const archive = new Archive(coreEmitter, symbols)
 
+    alarm.run()
     collector.run()
     archive.run()
 

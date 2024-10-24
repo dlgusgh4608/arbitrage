@@ -13,7 +13,7 @@ import { BuyOrder, SellOrder } from '@models'
 import type { WalletControllerType } from '@modules/wallet'
 import type { IUserTradeWithEnv, IBuyOpenOrderResponse } from '@models/types'
 import type { UpbitPrivateType } from '@modules/upbit/private/types'
-import type { BinancePrivateType, IOrderTrade } from '@modules/binance/private/types'
+import type { BinancePrivateType, IFundingFees, IOrderTrade } from '@modules/binance/private/types'
 import type { AutomaticType } from './automatic'
 
 
@@ -67,8 +67,6 @@ class OrderClass {
       const orderData = await order.get(uuid)
       // upbit 주문 종료
       
-
-      
       const {
         price: domestic_executed_price, // <- 구매한 원화
         executed_volume: domestic_quantity,
@@ -80,8 +78,7 @@ class OrderClass {
 
       const premium = getPremium(domestic_price / fixedUsdToKrw, price)
       
-      // PostgreSQL insert start
-      const response = await BuyOrder.Exec.create({
+      const payload = {
         id: data.orderClientId, // uuid v7
         symbol_id: this.userInfo.symbol_id,
         user_id: this.userInfo.user_id,
@@ -96,7 +93,10 @@ class OrderClass {
         is_maker: data.isMaker,
         domestic_trade_at: dayjs(domestic_trade_at).toDate(),
         overseas_trade_at: dayjs(data.eventTime).toDate()
-      })
+      }
+      
+      // PostgreSQL insert start
+      const response = await BuyOrder.Exec.create(payload)
 
       const log = [
         `${dayjs().format('YYYY-MM-DD HH:mm:ss')}: [ Order Buy ]`,
@@ -121,8 +121,8 @@ class OrderClass {
       await this.wallet.updateWallets()
 
       this.automatic.setUnlock()
-
-      // this.emitterOut.emit('alarmApp', response) // 추후 개발 예정 (거래 생성 알림 서비스)
+      
+      this.emitterOut.emit('buy', { ...payload, symbol: data.symbol })
     } catch (error) {
       throw error
     }
@@ -247,17 +247,27 @@ class OrderClass {
 
       await this.wallet.updateWallets()
       this.automatic.setUnlock()
-      // this.emitterOut.emit('alarmApp', response) // 미완성
+      
+      this.emitterOut.emit('sell', {
+        ...payload,
+        symbol: data.symbol,
+        user_id: this.userInfo.user_id,
+        profit: finalVal - investAmount
+      })
     } catch (error) {
       throw error
     }
+  }
+
+  private handleFundingFee(data: IFundingFees) {
+    this.emitterOut.emit('fundingFee', { ...data, user_id: this.userInfo.user_id })
   }
   
   private onOverseasStream() {
     this.emitterIn
       .on(BINANCE_BUY, (data: IOrderTrade) => this.handleBuy(data))
       .on(BINANCE_SELL, (data: IOrderTrade) => this.handleSell(data))
-      .on(BINANCE_FUNDING_FEE, (data) => console.log(data))
+      .on(BINANCE_FUNDING_FEE, (data: IFundingFees) => this.handleFundingFee(data))
   }
 
   private async initOpenOrders() {
