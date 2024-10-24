@@ -52,7 +52,8 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(128) NOT NULL,
     salt VARCHAR(32) NOT NULL,
     user_role_id INTEGER REFERENCES user_roles(id),
-    -- selected_user_env_id INTEGER,
+    telegram_id CHAR(64),
+    telegram_iv CHAR(32),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -61,13 +62,13 @@ CREATE TABLE IF NOT EXISTS user_envs (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
     exchange_id INTEGER REFERENCES exchanges(id),
-    domestic_access_key VARCHAR(255) NOT NULL,
+    domestic_access_key CHAR(64) NOT NULL,
     domestic_access_iv CHAR(32) NOT NULL,
-    domestic_secret_key VARCHAR(255) NOT NULL,
+    domestic_secret_key CHAR(64) NOT NULL,
     domestic_secret_iv CHAR(32) NOT NULL,
-    overseas_access_key VARCHAR(255) NOT NULL,
+    overseas_access_key CHAR(64) NOT NULL,
     overseas_access_iv CHAR(32) NOT NULL,
-    overseas_secret_key VARCHAR(255) NOT NULL,
+    overseas_secret_key CHAR(64) NOT NULL,
     overseas_secret_iv CHAR(32) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -1,6 +1,6 @@
 import { pool } from '@databases/pg'
 import { ModelObject, IModelObject } from './ModelObject'
-import { generateHashPassword, decrypt } from '@utils/crypto'
+import { generateHashPassword, decrypt, encrypt } from '@utils/crypto'
 
 interface UserSchema {
   id: number
@@ -9,6 +9,8 @@ interface UserSchema {
   password: string
   salt: string
   user_role_id: number
+  telegram_id: string | null
+  telegram_iv: string | null
   created_at: Date
   updated_at: Date
 }
@@ -41,13 +43,21 @@ interface IUserEnv {
 interface IOriginUserTradeWithEnv {
   user_id: number
   symbol_id: number
+  telegram_id?: string
+  telegram_iv?: string
   user_env: IOriginUserEnv
 }
 
-export interface IUserTradeWithEnv {
+interface IUserTradeWithEnv {
   user_id: number
   symbol_id: number
+  telegram_id?: string | null
   user_env: IUserEnv
+}
+
+interface IUpdateTelId {
+  user_id: number
+  telegram_id: string
 }
 
 
@@ -100,6 +110,8 @@ class User extends ModelObject implements IModelObject {
         SELECT
           u.id AS user_id,
           us.trade_symbol_id as symbol_id,
+          u.telegram_id AS telegram_id,
+          u.telegram_iv AS telegram_iv,
           json_build_object(
             'domestic_access_key', ue.domestic_access_key,
             'domestic_access_iv', ue.domestic_access_iv,
@@ -127,6 +139,25 @@ class User extends ModelObject implements IModelObject {
         ;
       `
       return { query }
+    },
+    updateTelId: function(payload: IUpdateTelId) {
+      const { user_id, telegram_id } = payload
+
+      const { encryptedData, iv } = encrypt(telegram_id)
+      
+      const query =
+      `
+      UPDATE
+        users
+      SET
+        telegram_id = $1,
+        telegram_iv = $2
+      WHERE
+        id = $3
+      `
+      const queryValues = [encryptedData, iv, user_id]
+
+      return { query, queryValues }
     }
   }
 
@@ -184,8 +215,11 @@ class User extends ModelObject implements IModelObject {
           const domestic_secret_key = decrypt(userEnv.domestic_secret_key, userEnv.domestic_secret_iv)
           const overseas_access_key = decrypt(userEnv.overseas_access_key, userEnv.overseas_access_iv)
           const overseas_secret_key = decrypt(userEnv.overseas_secret_key, userEnv.overseas_secret_iv)
+          const telegram_id = (user.telegram_id && user.telegram_iv) ? decrypt(user.telegram_id, user.telegram_iv) : null
           return {
-            ...user,
+            user_id: user.user_id,
+            symbol_id: user.symbol_id,
+            telegram_id,
             user_env: {
               domestic_access_key,
               domestic_secret_key,
@@ -199,9 +233,18 @@ class User extends ModelObject implements IModelObject {
       } catch (error) {
         throw error
       }
+    },
+    updateTelId: async (payload: IUpdateTelId): Promise<void> => {
+      try {
+        const { query, queryValues } = this.Query.updateTelId(payload)
+
+        await pool.query(query, queryValues)
+      } catch (error) {
+        throw error
+      }
     }
   }
 }
 
-export type { UserSchema, CreateUserPayload }
+export type { UserSchema, CreateUserPayload, IUserTradeWithEnv }
 export default new User()

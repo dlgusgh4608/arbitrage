@@ -1,8 +1,7 @@
 import './envInit' // dotenv initialize
 
 import { initializeDatabase } from './databases/pg/connect'
-import { pool } from './databases/pg'
-import { Symbol, User, UserEnv } from '@models'
+import { Symbol, User } from '@models'
 
 import { UsdToKrw } from '@modules/exchange-rate/usd-to-krw'
 import { EventBroker } from '@modules/event-broker'
@@ -10,6 +9,7 @@ import { EventBroker } from '@modules/event-broker'
 import { Collector } from './apps/collector'
 import { Archive } from './apps/archive'
 import { Order } from './apps/order'
+import { Alarm } from './apps/alarm'
 
 const EXCHANGE_RATE_INTERVAL_TIME_TO_SEC = 10
 
@@ -30,6 +30,7 @@ async function main() {
       order.run()
     })
     
+    const alarm = new Alarm(usersWithEnv, coreEmitter)
     const collector = new Collector(coreEmitter, symbols)
     const archive = new Archive(coreEmitter, symbols)
 
