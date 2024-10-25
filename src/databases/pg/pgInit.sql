@@ -1,3 +1,5 @@
+SET TIME ZONE 'Asia/Seoul';
+
 -- 거래소 생성
 CREATE TABLE IF NOT EXISTS exchanges (
     id SERIAL PRIMARY KEY,

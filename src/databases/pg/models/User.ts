@@ -107,36 +107,35 @@ class User extends ModelObject implements IModelObject {
     findWithEnv: function() {
       const query = 
       `
-        SELECT
-          u.id AS user_id,
-          us.trade_symbol_id as symbol_id,
-          u.telegram_id AS telegram_id,
-          u.telegram_iv AS telegram_iv,
-          json_build_object(
-            'domestic_access_key', ue.domestic_access_key,
-            'domestic_access_iv', ue.domestic_access_iv,
-            'domestic_secret_key', ue.domestic_secret_key,
-            'domestic_secret_iv', ue.domestic_secret_iv,
-            'overseas_access_key', ue.overseas_access_key,
-            'overseas_access_iv', ue.overseas_access_iv,
-            'overseas_secret_key', ue.overseas_secret_key,
-            'overseas_secret_iv', ue.overseas_secret_iv
-          ) as user_env
-        FROM 
-          users AS u
-        INNER JOIN
-          user_statuses AS us ON u.id = us.user_id
-        INNER JOIN
-          user_envs as ue ON us.trade_user_env_id = ue.id
-        WHERE
-          us.trading = true
-          AND
-          u.id IN (
-            SELECT id
-            FROM user_roles
-            WHERE role != 'normal'
+      SELECT
+        u.id AS user_id,
+        us.trade_symbol_id as symbol_id,
+        u.telegram_id AS telegram_id,
+        u.telegram_iv AS telegram_iv,
+        json_build_object(
+          'domestic_access_key', ue.domestic_access_key,
+          'domestic_access_iv', ue.domestic_access_iv,
+          'domestic_secret_key', ue.domestic_secret_key,
+          'domestic_secret_iv', ue.domestic_secret_iv,
+          'overseas_access_key', ue.overseas_access_key,
+          'overseas_access_iv', ue.overseas_access_iv,
+          'overseas_secret_key', ue.overseas_secret_key,
+          'overseas_secret_iv', ue.overseas_secret_iv
+        ) as user_env
+      FROM 
+        users AS u
+      INNER JOIN
+        user_statuses AS us ON u.id = us.user_id
+      INNER JOIN
+        user_envs as ue ON us.trade_user_env_id = ue.id
+      WHERE
+        us.trading = true
+        AND
+        u.user_role_id <>
+          (
+          SELECT id FROM user_roles WHERE role = 'normal'
           )
-        ;
+      ;
       `
       return { query }
     },

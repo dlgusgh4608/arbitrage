@@ -5,6 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "cross-env NODE_ENV=production node dist/index.js",
+    "pro": "npm run build && npm run start",
     "build": "tsc -p . && tsc-alias && cp -r src/databases/pg/pgInit.sql dist/databases/pg/pgInit.sql",
     "dev": "cross-env NODE_ENV=development nodemon --exec ts-node -r tsconfig-paths/register ./src/index.ts"
   },

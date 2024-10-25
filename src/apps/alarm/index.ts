@@ -30,7 +30,7 @@ export class Alarm extends Telegram {
     this.emitter = emitter
   }
 
-  private handleBuy(payload: IBuyPayload) {
+  private async handleBuy(payload: IBuyPayload) {
     const message = [
       `[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')}: 구매(${payload.symbol}) ]`,
       `프리미엄: ${payload.premium}`,
@@ -45,10 +45,10 @@ export class Alarm extends Telegram {
       `거래속성: ${payload.is_maker ? 'MAKER' : 'TAKER'}`,
     ].join(`\n`)
 
-    this.sendMessageByUserId(payload.user_id, message)
+    await this.sendMessageByUserId(payload.user_id, message)
   }
 
-  private handleSell(payload: ISellPayload) {
+  private async handleSell(payload: ISellPayload) {
     const message = [
       `[ ${dayjs().format('YYYY-MM-DD HH:mm:ss')}: 판매(${payload.symbol}) ]`,
       `수 익 률: ${payload.profit_rate}`,
@@ -66,21 +66,21 @@ export class Alarm extends Telegram {
       ``,
       `거래속성: ${payload.is_maker ? 'MAKER' : 'TAKER'}`,
     ].join(`\n`)
-
-    this.sendMessageByUserId(payload.user_id, message)
+    
+    await this.sendMessageByUserId(payload.user_id, message)
   }
 
-  private handleFundingFee(payload: IFundingFee) {
+  private async handleFundingFee(payload: IFundingFee) {
     const messageToArray = [
       `[ ${dayjs(payload.eventTime).format('YYYY-MM-DD HH:mm:ss')}: 펀딩피 ]`,
       ``,
     ]
     payload.fees.forEach(fee => messageToArray.push(String(fee.fee).concat(fee.asset)))
 
-    this.sendMessageByUserId(payload.user_id, messageToArray.join(`\n`))
+    await this.sendMessageByUserId(payload.user_id, messageToArray.join(`\n`))
   }
   
-  public run() {
+  public async run() {
     this.emitter
       .on(BUY, this.handleBuy)
       .on(SELL, this.handleSell)
