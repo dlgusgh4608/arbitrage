@@ -69,7 +69,10 @@ export class Automatic extends Abstract {
   
   protected trade = async (response: Premium): Promise<void> => {
     try {
-      if(this.lock) return console.log('lock!')// lock시 return
+      if(this.lock) return // lock시 return
+      const { avg_usd_to_krw, max_premium, min_premium } = this.standardPremium
+
+      if(!max_premium || !min_premium) return //database의 데이터가 충분치 않을경우 return
 
       const { overseas, symbol, domestic, usdToKrw, premium } = response
 
@@ -83,9 +86,6 @@ export class Automatic extends Abstract {
 
       if(this.mvPriceStack.length < 6) return //최근 5번의 움직임 평균을 구하여 Target함.
       this.mvPriceStack.shift()
-
-      const { avg_usd_to_krw, max_premium, min_premium } = this.standardPremium
-
       
       const premiumOfStandardUsdToKrw = getPremium(krwToUsd(domestic, avg_usd_to_krw), overseas)
       const knee = getKneeValue(max_premium, min_premium)

@@ -12,14 +12,6 @@ interface SymbolPriceSchema {
   overseas_trade_at: Date
 }
 
-// interface SymbolPriceOfTime { // 혹시 몰라서 냅둠
-//   date: Date
-//   open: number
-//   high: number
-//   low: number
-//   close: number
-// }
-
 interface IPremiumBySymbolIdInMinuteResponse {
   avg_usd_to_krw: number
   min_premium: number
@@ -37,130 +29,59 @@ class SymbolPrice extends ModelObject implements IModelObject {
 
       return { query, queryValues: values }
     },
-    // findPremiumBySymbolIdInMinute: function(symbol_id: number) { // 혹시 몰라서 냅둠
-    //   const query =
-    //   `
-    //   SELECT
-    //     date,
-    //     open_price.premium AS open,
-    //     high,
-    //     low,
-    //     close_price.premium AS close
-    //   FROM (
-    //     SELECT
-    //       symbol_id,
-    //       DATE_TRUNC('minute', created_at) AS date,
-    //       MAX(created_at) as close_created_at,
-    //       MIN(created_at) as open_created_at,
-    //       MAX(premium) as high,
-    //       MIN(premium) as low
-    //     FROM
-    //       symbol_prices
-    //     WHERE
-    //       symbol_id = $1
-    //     GROUP BY
-    //       date, symbol_id
-    //     ORDER BY
-    //       date
-    //   ) AS group_of_time
-    //   INNER JOIN symbol_prices AS close_price
-    //     ON
-    //       group_of_time.close_created_at = close_price.created_at
-    //     AND
-    //       group_of_time.symbol_id = close_price.symbol_id
-    //   INNER JOIN symbol_prices AS open_price
-    //     ON
-    //       group_of_time.open_created_at = open_price.created_at
-    //     AND
-    //       group_of_time.symbol_id = open_price.symbol_id
-    //   `
-
-    //   return { query, queryValues: [symbol_id] }
-
-    // },
     findPremiumBySymbolIdInMinute: function(symbol_id: number, minute: number = 360) { // default 6hour
       const limit = minute * 60
-      
-      // SELECT
-      //   CAST(avg_usd_to_krw AS float) AS avg_usd_to_krw,
-      //   CAST(
-      //     ROUND(
-      //       MIN(
-      //         (domestic / ROUND(overseas * avg_usd_to_krw) - 1) * 100
-      //       )::numeric,
-      //       2
-      //     ) AS float
-      //   ) AS min_premium
-      //   ,
-      //   CAST(
-      //     ROUND(
-      //       MAX(
-      //         (domestic / ROUND(overseas * avg_usd_to_krw) - 1) * 100
-      //       )::numeric,
-      //       2
-      //     ) AS float
-      //   ) AS max_premium
-      // FROM (
-      //     SELECT
-      //         ROUND(
-      //           AVG(usd_to_krw)::numeric,
-      //           4
-      //         ) AS avg_usd_to_krw,
-      //         domestic,
-      //         overseas
-      //     FROM
-      //         symbol_prices
-      //     WHERE
-      //         symbol_id = $1
-      //     GROUP BY domestic, overseas
-      //     LIMIT $2
-      // ) AS sub_query
-      // GROUP BY
-      //   avg_usd_to_krw;
-      
-      
-      
-      
-      
+      const intervalToSecond = (minute + 5) * 60
       const query =
       `
-      WITH avg_values AS (
+      WITH limit_values AS (
         SELECT 
-          AVG(usd_to_krw) AS avg_usd_to_krw,
           domestic,
-          overseas
+          overseas,
+          created_at,
+          usd_to_krw
         FROM 
           symbol_prices
         WHERE 
           symbol_id = $1
-        GROUP BY 
-          domestic, overseas
+        ORDER BY
+          created_at DESC
         LIMIT $2
+      ),
+      avg_value AS (
+        SELECT
+          AVG(usd_to_krw) AS avg_usd_to_krw
+        FROM
+          limit_values
       )
       SELECT 
-        CAST(
-          ROUND(
-            AVG(avg_usd_to_krw)::numeric,
-            4
-          ) AS float
-        ) AS avg_usd_to_krw,
-        CAST(
-          ROUND(
-            MAX((domestic / ROUND(overseas * avg_usd_to_krw) - 1) * 100)::numeric,
-            4
-          ) AS float
-        ) AS max_premium,
-        CAST(
-          ROUND(
-            MIN((domestic / ROUND(overseas * avg_usd_to_krw) - 1) * 100)::numeric,
-            4
-          ) AS float
-        ) AS min_premium
+        av.avg_usd_to_krw AS avg_usd_to_krw,
+        CASE 
+          WHEN MIN(lv.created_at) < NOW() - INTERVAL '1 second' * $3 THEN NULL
+          ELSE CAST(
+            ROUND(
+              MAX((lv.domestic / ROUND(lv.overseas * av.avg_usd_to_krw) - 1) * 100)::numeric,
+              4
+            ) AS float
+          ) 
+        END AS max_premium,
+        CASE 
+          WHEN MIN(lv.created_at) < NOW() - INTERVAL '1 second' * $3 THEN NULL
+          ELSE CAST(
+            ROUND(
+              MIN((lv.domestic / ROUND(lv.overseas * av.avg_usd_to_krw) - 1) * 100)::numeric,
+              4
+            ) AS float
+          ) 
+        END AS min_premium
       FROM 
-        avg_values;
+        limit_values AS lv,
+        avg_value AS av
+      GROUP BY
+        av.avg_usd_to_krw;
       `
 
-      return { query, queryValues: [symbol_id, limit] }
+      return { query, queryValues: [symbol_id, limit, intervalToSecond] }
     }
   }
 
@@ -175,6 +96,8 @@ class SymbolPrice extends ModelObject implements IModelObject {
       }
     },
     findPremiumBySymbolIdInMinute: async (symbol_id: number, minute: number = 360): Promise<IPremiumBySymbolIdInMinuteResponse> => {
+      if(minute < 60) throw new Error('minium minute is 60')
+      
       const { query, queryValues } = this.Query.findPremiumBySymbolIdInMinute(symbol_id, minute)
       try {
         const { rows } = await pool.query<IPremiumBySymbolIdInMinuteResponse>(query, queryValues)
