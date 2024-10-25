@@ -19,5 +19,7 @@
     "esModuleInterop": true,
     "emitDecoratorMetadata": true, // 컴파일시 데코레이터에 대한 메타데이터를 생성 (package.json -> script -> reflect-metadata)
     "experimentalDecorators": true, // typeORM 에서 데코레이터(ex. @Column())를 사용하기 위해
-  }
+  },
+  "include": ["src/**/*", "src/**/*.sql"],
+  
 }
