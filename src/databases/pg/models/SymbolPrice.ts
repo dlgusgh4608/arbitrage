@@ -31,7 +31,7 @@ class SymbolPrice extends ModelObject implements IModelObject {
     },
     findPremiumBySymbolIdInMinute: function(symbol_id: number, minute: number = 360) { // default 6hour
       const limit = minute * 60
-      const intervalToSecond = (minute + 5) * 60
+      const intervalMinute = minute + 5
       const query =
       `
       WITH limit_values AS (
@@ -57,7 +57,7 @@ class SymbolPrice extends ModelObject implements IModelObject {
       SELECT 
         av.avg_usd_to_krw AS avg_usd_to_krw,
         CASE 
-          WHEN MIN(lv.created_at) < NOW() - INTERVAL '1 second' * $3 THEN NULL
+          WHEN MIN(lv.created_at) < NOW() - INTERVAL '1 minute' * $3 THEN NULL
           ELSE CAST(
             ROUND(
               MAX((lv.domestic / ROUND(lv.overseas * av.avg_usd_to_krw) - 1) * 100)::numeric,
@@ -66,7 +66,7 @@ class SymbolPrice extends ModelObject implements IModelObject {
           ) 
         END AS max_premium,
         CASE 
-          WHEN MIN(lv.created_at) < NOW() - INTERVAL '1 second' * $3 THEN NULL
+          WHEN MIN(lv.created_at) < NOW() - INTERVAL '1 minute' * $3 THEN NULL
           ELSE CAST(
             ROUND(
               MIN((lv.domestic / ROUND(lv.overseas * av.avg_usd_to_krw) - 1) * 100)::numeric,
@@ -81,7 +81,7 @@ class SymbolPrice extends ModelObject implements IModelObject {
         av.avg_usd_to_krw;
       `
 
-      return { query, queryValues: [symbol_id, limit, intervalToSecond] }
+      return { query, queryValues: [symbol_id, limit, intervalMinute] }
     }
   }
 
