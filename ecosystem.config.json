@@ -1,0 +1,15 @@
+{
+  "name": "arbitrage",
+  "script": "./dist/index.js",
+  "cwd": ".",
+  "watch": true,
+  "ignore_watch": [
+    "node_modules",
+    "logs"
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "output": "~/logs/pm2/console.log",
+  "error": "~/logs/pm2/consoleError.log"
+}
